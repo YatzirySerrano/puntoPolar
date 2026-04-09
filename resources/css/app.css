@@ -90,6 +90,13 @@
 }
 
 :root {
+
+    --brand-green: #7dd03c;
+    --brand-blue: #30beef;
+    --brand-gray: #d5d5d5;
+    --brand-soft: #f6f6f6;
+    --brand-text: #1f2937;
+
     --background: hsl(0 0% 100%);
     --foreground: hsl(0 0% 3.9%);
     --card: hsl(0 0% 100%);
