@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
-import { home } from '@/routes';
+import { Link } from '@inertiajs/vue3'
+import AppLogoIcon from '@/components/AppLogoIcon.vue'
 
 defineProps<{
     title?: string;
     description?: string;
-}>();
+}>()
 </script>
 
 <template>
@@ -17,7 +16,7 @@ defineProps<{
             <div class="flex flex-col gap-8">
                 <div class="flex flex-col items-center gap-4">
                     <Link
-                        :href="home()"
+                        href="/"
                         class="flex flex-col items-center gap-2 font-medium"
                     >
                         <div
@@ -29,6 +28,7 @@ defineProps<{
                         </div>
                         <span class="sr-only">{{ title }}</span>
                     </Link>
+
                     <div class="space-y-2 text-center">
                         <h1 class="text-xl font-medium">{{ title }}</h1>
                         <p class="text-center text-sm text-muted-foreground">
@@ -36,6 +36,7 @@ defineProps<{
                         </p>
                     </div>
                 </div>
+
                 <slot />
             </div>
         </div>
