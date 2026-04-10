@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 
 interface Producto {
@@ -13,6 +13,9 @@ interface Producto {
     destacado: boolean;
     activo: boolean;
     visible: boolean;
+    descripcion?: string | null;
+    categoria_id?: number | null;
+    marca_id?: number | null;
 }
 
 interface OptionItem {
@@ -23,7 +26,6 @@ interface OptionItem {
 const props = defineProps<{
     productos: {
         data: Producto[];
-        links: Array<{ url: string | null; label: string; active: boolean }>;
     };
     categorias: OptionItem[];
     marcas: OptionItem[];
@@ -31,8 +33,12 @@ const props = defineProps<{
 }>();
 
 const { formatCurrency } = useCurrency();
-const editandoId = ref<number | null>(null);
 const page = usePage();
+
+const totalStock = computed(() =>
+    props.productos.data.reduce((acc, item) => acc + item.stock, 0),
+);
+
 const mostrarFlash = () => {
     const ok = page.props.flash?.success;
     const err = page.props.flash?.error;
@@ -55,56 +61,124 @@ const mostrarFlash = () => {
 onMounted(mostrarFlash);
 watch(() => page.props.flash, mostrarFlash, { deep: true });
 
-const totalStock = computed(() =>
-    props.productos.data.reduce((acc, item) => acc + item.stock, 0),
-);
-const totalInventario = computed(() =>
-    props.productos.data.reduce((acc, item) => acc + Number(item.precio), 0),
-);
+const selectOptions = (items: OptionItem[], selected?: number | null) => {
+    const base = '<option value="">Selecciona...</option>';
+    const options = items
+        .map(
+            (item) =>
+                `<option value="${item.id}" ${selected === item.id ? 'selected' : ''}>${item.nombre}</option>`,
+        )
+        .join('');
 
-const form = useForm({
-    nombre: '',
-    sku: '',
-    precio: 0,
-    stock: 0,
-    categoria_id: null as number | null,
-    marca_id: null as number | null,
-    descripcion: '',
-    destacado: false,
-    visible: true,
-    activo: true,
-});
+    return base + options;
+};
 
-const enEdicion = computed(() => editandoId.value !== null);
+const obtenerCamposProducto = (producto?: Producto) => {
+    return `
+        <div class="grid gap-3 text-left">
+            <input id="swal-nombre" class="swal2-input" placeholder="Nombre" value="${producto?.nombre ?? ''}">
+            <input id="swal-sku" class="swal2-input" placeholder="SKU" value="${producto?.sku ?? ''}">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <input id="swal-precio" class="swal2-input" type="number" step="0.01" placeholder="Precio" value="${producto?.precio ?? 0}">
+                <input id="swal-stock" class="swal2-input" type="number" placeholder="Stock" value="${producto?.stock ?? 0}">
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                <select id="swal-categoria" class="swal2-select">${selectOptions(props.categorias, producto?.categoria_id)}</select>
+                <select id="swal-marca" class="swal2-select">${selectOptions(props.marcas, producto?.marca_id)}</select>
+            </div>
+            <textarea id="swal-descripcion" class="swal2-textarea" placeholder="Descripción">${producto?.descripcion ?? ''}</textarea>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="swal-destacado" type="checkbox" ${producto?.destacado ? 'checked' : ''}>Destacado</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="swal-visible" type="checkbox" ${(producto?.visible ?? true) ? 'checked' : ''}>Visible</label>
+            <label style="display:flex;gap:8px;align-items:center;"><input id="swal-activo" type="checkbox" ${(producto?.activo ?? true) ? 'checked' : ''}>Activo</label>
+        </div>
+    `;
+};
 
-const submit = () => {
-    if (enEdicion.value && editandoId.value) {
-        form.put(`/admin/productos/${editandoId.value}`, {
+const modalProducto = async (producto?: Producto) => {
+    const isEdit = Boolean(producto);
+
+    const result = await Swal.fire({
+        title: isEdit ? 'Editar producto' : 'Nuevo producto',
+        html: obtenerCamposProducto(producto),
+        width: 700,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: isEdit ? 'Actualizar' : 'Crear',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const nombre = (
+                document.getElementById('swal-nombre') as HTMLInputElement
+            )?.value;
+            const sku = (
+                document.getElementById('swal-sku') as HTMLInputElement
+            )?.value;
+
+            if (!nombre || !sku) {
+                Swal.showValidationMessage('Nombre y SKU son obligatorios.');
+
+                return;
+            }
+
+            return {
+                nombre,
+                sku,
+                precio: Number(
+                    (document.getElementById('swal-precio') as HTMLInputElement)
+                        ?.value || 0,
+                ),
+                stock: Number(
+                    (document.getElementById('swal-stock') as HTMLInputElement)
+                        ?.value || 0,
+                ),
+                categoria_id:
+                    Number(
+                        (
+                            document.getElementById(
+                                'swal-categoria',
+                            ) as HTMLSelectElement
+                        )?.value,
+                    ) || null,
+                marca_id:
+                    Number(
+                        (
+                            document.getElementById(
+                                'swal-marca',
+                            ) as HTMLSelectElement
+                        )?.value,
+                    ) || null,
+                descripcion: (
+                    document.getElementById(
+                        'swal-descripcion',
+                    ) as HTMLTextAreaElement
+                )?.value,
+                destacado: (
+                    document.getElementById(
+                        'swal-destacado',
+                    ) as HTMLInputElement
+                )?.checked,
+                visible: (
+                    document.getElementById('swal-visible') as HTMLInputElement
+                )?.checked,
+                activo: (
+                    document.getElementById('swal-activo') as HTMLInputElement
+                )?.checked,
+            };
+        },
+    });
+
+    if (!result.isConfirmed || !result.value) {
+        return;
+    }
+
+    if (isEdit && producto) {
+        router.put(`/admin/productos/${producto.id}`, result.value, {
             preserveScroll: true,
-            onSuccess: () => resetForm(),
         });
 
         return;
     }
 
-    form.post('/admin/productos', {
-        preserveScroll: true,
-        onSuccess: () => resetForm(),
-    });
-};
-
-const editar = (producto: Producto) => {
-    editandoId.value = producto.id;
-    form.nombre = producto.nombre;
-    form.sku = producto.sku;
-    form.precio = Number(producto.precio);
-    form.stock = producto.stock;
-    form.categoria_id = null;
-    form.marca_id = null;
-    form.descripcion = '';
-    form.destacado = producto.destacado;
-    form.visible = producto.visible;
-    form.activo = producto.activo;
+    router.post('/admin/productos', result.value, { preserveScroll: true });
 };
 
 const eliminar = async (id: number) => {
@@ -124,11 +198,6 @@ const eliminar = async (id: number) => {
 
     router.delete(`/admin/productos/${id}`, { preserveScroll: true });
 };
-
-const resetForm = () => {
-    editandoId.value = null;
-    form.reset();
-};
 </script>
 
 <template>
@@ -138,14 +207,26 @@ const resetForm = () => {
         <header
             class="rounded-3xl border border-[var(--brand-gray)]/60 bg-gradient-to-r from-white to-[var(--brand-soft)] p-5 shadow-sm sm:p-6"
         >
-            <h1 class="text-2xl font-black sm:text-3xl">
-                Gestión de productos
-            </h1>
-            <p class="text-sm text-neutral-500">
-                Controla catálogo, inventario y estado de visibilidad.
-            </p>
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h1 class="text-2xl font-black sm:text-3xl">
+                        Gestión de productos
+                    </h1>
+                    <p class="text-sm text-neutral-500">
+                        Crea y edita productos desde modales.
+                    </p>
+                </div>
 
-            <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <button
+                    type="button"
+                    class="rounded-full bg-[var(--brand-blue)] px-5 py-2 text-sm font-bold text-white transition hover:brightness-90"
+                    @click="modalProducto()"
+                >
+                    + Nuevo producto
+                </button>
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-3 xl:grid-cols-4">
                 <article class="rounded-2xl bg-white p-4 shadow-sm">
                     <p class="text-xs text-neutral-500 uppercase">Productos</p>
                     <p class="text-2xl font-black">
@@ -153,139 +234,17 @@ const resetForm = () => {
                     </p>
                 </article>
                 <article class="rounded-2xl bg-white p-4 shadow-sm">
-                    <p class="text-xs text-neutral-500 uppercase">
-                        Stock total
-                    </p>
+                    <p class="text-xs text-neutral-500 uppercase">Stock</p>
                     <p class="text-2xl font-black">{{ totalStock }}</p>
                 </article>
-                <article class="rounded-2xl bg-white p-4 shadow-sm">
-                    <p class="text-xs text-neutral-500 uppercase">
-                        Valor listado
-                    </p>
-                    <p class="text-2xl font-black">
-                        {{ formatCurrency(totalInventario) }}
-                    </p>
-                </article>
-                <article class="rounded-2xl bg-white p-4 shadow-sm">
-                    <p class="text-xs text-neutral-500 uppercase">Destacados</p>
-                    <p class="text-2xl font-black">
-                        {{ productos.data.filter((p) => p.destacado).length }}
-                    </p>
-                </article>
-            </div>
-        </header>
-
-        <section class="grid gap-6 xl:grid-cols-[1.15fr_2fr]">
-            <form
-                class="rounded-3xl border bg-white p-4 shadow-sm sm:p-6"
-                @submit.prevent="submit"
-            >
-                <h2 class="text-lg font-black">
-                    {{ enEdicion ? 'Editar producto' : 'Nuevo producto' }}
-                </h2>
-                <div class="mt-4 grid gap-3 sm:grid-cols-2">
-                    <input
-                        v-model="form.nombre"
-                        type="text"
-                        placeholder="Nombre"
-                        class="h-11 rounded-xl border px-3 text-sm"
-                    />
-                    <input
-                        v-model="form.sku"
-                        type="text"
-                        placeholder="SKU"
-                        class="h-11 rounded-xl border px-3 text-sm"
-                    />
-                    <input
-                        v-model.number="form.precio"
-                        type="number"
-                        step="0.01"
-                        placeholder="Precio"
-                        class="h-11 rounded-xl border px-3 text-sm"
-                    />
-                    <input
-                        v-model.number="form.stock"
-                        type="number"
-                        placeholder="Stock"
-                        class="h-11 rounded-xl border px-3 text-sm"
-                    />
-                    <select
-                        v-model="form.categoria_id"
-                        class="h-11 rounded-xl border px-3 text-sm"
-                    >
-                        <option :value="null">Categoría</option>
-                        <option
-                            v-for="categoria in categorias"
-                            :key="categoria.id"
-                            :value="categoria.id"
-                        >
-                            {{ categoria.nombre }}
-                        </option>
-                    </select>
-                    <select
-                        v-model="form.marca_id"
-                        class="h-11 rounded-xl border px-3 text-sm"
-                    >
-                        <option :value="null">Marca</option>
-                        <option
-                            v-for="marca in marcas"
-                            :key="marca.id"
-                            :value="marca.id"
-                        >
-                            {{ marca.nombre }}
-                        </option>
-                    </select>
-                </div>
-
-                <textarea
-                    v-model="form.descripcion"
-                    rows="3"
-                    placeholder="Descripción"
-                    class="mt-3 w-full rounded-xl border p-3 text-sm"
-                />
-
-                <div class="mt-3 flex flex-wrap gap-3 text-sm">
-                    <label class="flex items-center gap-2"
-                        ><input v-model="form.destacado" type="checkbox" />
-                        Destacado</label
-                    >
-                    <label class="flex items-center gap-2"
-                        ><input v-model="form.visible" type="checkbox" />
-                        Visible</label
-                    >
-                    <label class="flex items-center gap-2"
-                        ><input v-model="form.activo" type="checkbox" />
-                        Activo</label
-                    >
-                </div>
-
-                <div class="mt-4 flex gap-2">
-                    <button
-                        type="submit"
-                        class="rounded-full bg-[var(--brand-blue)] px-5 py-2 text-sm font-bold text-white transition hover:brightness-90"
-                    >
-                        Guardar
-                    </button>
-                    <button
-                        type="button"
-                        class="rounded-full border px-5 py-2 text-sm font-bold transition hover:bg-neutral-100"
-                        @click="resetForm"
-                    >
-                        Cancelar
-                    </button>
-                </div>
-            </form>
-
-            <div class="rounded-3xl border bg-white p-4 shadow-sm sm:p-6">
-                <div
-                    class="mb-4 flex flex-wrap items-center justify-between gap-3"
+                <article
+                    class="rounded-2xl bg-white p-4 shadow-sm sm:col-span-1 xl:col-span-2"
                 >
-                    <h2 class="text-lg font-black">Listado</h2>
                     <input
                         :value="filters.search || ''"
                         type="text"
                         placeholder="Buscar..."
-                        class="h-10 rounded-xl border px-3 text-sm"
+                        class="h-10 w-full rounded-xl border px-3 text-sm"
                         @input="
                             router.get(
                                 '/admin/productos',
@@ -297,105 +256,44 @@ const resetForm = () => {
                             )
                         "
                     />
-                </div>
-
-                <div class="grid gap-3 xl:hidden">
-                    <article
-                        v-for="producto in productos.data"
-                        :key="producto.id"
-                        class="rounded-2xl border p-4"
-                    >
-                        <p class="font-black">{{ producto.nombre }}</p>
-                        <p class="text-xs text-neutral-500">
-                            {{ producto.sku }}
-                        </p>
-                        <p class="mt-2 text-sm">
-                            {{ formatCurrency(producto.precio) }} · Stock
-                            {{ producto.stock }}
-                        </p>
-                        <div class="mt-3 flex gap-2">
-                            <button
-                                type="button"
-                                class="rounded-full border px-3 py-1 text-xs"
-                                @click="editar(producto)"
-                            >
-                                Editar
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded-full bg-red-500 px-3 py-1 text-xs text-white"
-                                @click="eliminar(producto.id)"
-                            >
-                                Eliminar
-                            </button>
-                        </div>
-                    </article>
-                </div>
-
-                <div class="hidden overflow-x-auto xl:block">
-                    <table class="min-w-full text-sm">
-                        <thead
-                            class="bg-neutral-50 text-left text-xs text-neutral-500 uppercase"
-                        >
-                            <tr>
-                                <th class="px-3 py-2">Producto</th>
-                                <th class="px-3 py-2">Precio</th>
-                                <th class="px-3 py-2">Stock</th>
-                                <th class="px-3 py-2">Estado</th>
-                                <th class="px-3 py-2 text-right">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr
-                                v-for="producto in productos.data"
-                                :key="producto.id"
-                                class="border-t"
-                            >
-                                <td class="px-3 py-2">
-                                    <p class="font-bold">
-                                        {{ producto.nombre }}
-                                    </p>
-                                    <p class="text-xs text-neutral-500">
-                                        {{ producto.sku }}
-                                    </p>
-                                </td>
-                                <td class="px-3 py-2">
-                                    {{ formatCurrency(producto.precio) }}
-                                </td>
-                                <td class="px-3 py-2">{{ producto.stock }}</td>
-                                <td class="px-3 py-2">
-                                    <span
-                                        class="rounded-full bg-neutral-100 px-2 py-1 text-xs"
-                                        >{{
-                                            producto.activo
-                                                ? 'Activo'
-                                                : 'Inactivo'
-                                        }}</span
-                                    >
-                                </td>
-                                <td class="px-3 py-2 text-right">
-                                    <div class="flex justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            class="rounded-full border px-3 py-1 text-xs"
-                                            @click="editar(producto)"
-                                        >
-                                            Editar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            class="rounded-full bg-red-500 px-3 py-1 text-xs text-white"
-                                            @click="eliminar(producto.id)"
-                                        >
-                                            Eliminar
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                </article>
             </div>
+        </header>
+
+        <section
+            class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+        >
+            <article
+                v-for="producto in productos.data"
+                :key="producto.id"
+                class="rounded-2xl border bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+            >
+                <p class="font-black">{{ producto.nombre }}</p>
+                <p class="text-xs text-neutral-500">{{ producto.sku }}</p>
+                <p class="mt-2 text-xl font-black">
+                    {{ formatCurrency(producto.precio) }}
+                </p>
+                <p class="text-sm text-neutral-600">
+                    Stock: {{ producto.stock }}
+                </p>
+
+                <div class="mt-3 flex gap-2">
+                    <button
+                        type="button"
+                        class="rounded-full border px-3 py-1 text-xs"
+                        @click="modalProducto(producto)"
+                    >
+                        Editar
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-full bg-red-500 px-3 py-1 text-xs text-white"
+                        @click="eliminar(producto.id)"
+                    >
+                        Eliminar
+                    </button>
+                </div>
+            </article>
         </section>
     </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 
 interface Usuario {
     id: number;
@@ -46,31 +46,51 @@ const resumenRoles = computed(() => ({
     admins: props.usuarios.data.filter((u) => u.rol === 'admin').length,
 }));
 
-const editandoId = ref<number | null>(null);
-const form = useForm({
-    name: '',
-    email: '',
-    rol: 'cliente',
-});
+const modalEditar = async (usuario: Usuario) => {
+    const result = await Swal.fire({
+        title: `Editar ${usuario.name}`,
+        html: `
+            <input id="swal-name" class="swal2-input" placeholder="Nombre" value="${usuario.name}">
+            <input id="swal-email" class="swal2-input" type="email" placeholder="Correo" value="${usuario.email}">
+            <select id="swal-rol" class="swal2-select">
+                ${props.roles
+                    .map(
+                        (rol) =>
+                            `<option value="${rol}" ${usuario.rol === rol ? 'selected' : ''}>${rol}</option>`,
+                    )
+                    .join('')}
+            </select>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar cambios',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const name = (
+                document.getElementById('swal-name') as HTMLInputElement
+            )?.value;
+            const email = (
+                document.getElementById('swal-email') as HTMLInputElement
+            )?.value;
+            const rol = (
+                document.getElementById('swal-rol') as HTMLSelectElement
+            )?.value;
 
-const editar = (usuario: Usuario) => {
-    editandoId.value = usuario.id;
-    form.name = usuario.name;
-    form.email = usuario.email;
-    form.rol = usuario.rol;
-};
+            if (!name || !email) {
+                Swal.showValidationMessage('Nombre y correo son obligatorios.');
 
-const guardar = () => {
-    if (!editandoId.value) {
+                return;
+            }
+
+            return { name, email, rol };
+        },
+    });
+
+    if (!result.isConfirmed || !result.value) {
         return;
     }
 
-    form.put(`/admin/usuarios/${editandoId.value}`, {
+    router.put(`/admin/usuarios/${usuario.id}`, result.value, {
         preserveScroll: true,
-        onSuccess: () => {
-            form.reset();
-            editandoId.value = null;
-        },
     });
 };
 
@@ -103,9 +123,6 @@ const eliminar = async (id: number) => {
             <h1 class="text-2xl font-black sm:text-3xl">
                 Gestión de usuarios y roles
             </h1>
-            <p class="text-sm text-neutral-500">
-                Administra perfiles cliente, vendedor y administrador.
-            </p>
 
             <div class="mt-4 grid gap-3 sm:grid-cols-3">
                 <article class="rounded-2xl bg-white p-4 shadow-sm">
@@ -125,103 +142,55 @@ const eliminar = async (id: number) => {
                     <p class="text-2xl font-black">{{ resumenRoles.admins }}</p>
                 </article>
             </div>
+
+            <input
+                :value="filters.search || ''"
+                type="text"
+                placeholder="Buscar..."
+                class="mt-4 h-10 w-full rounded-xl border px-3 text-sm"
+                @input="
+                    router.get(
+                        '/admin/usuarios',
+                        { search: ($event.target as HTMLInputElement).value },
+                        { preserveState: true, replace: true },
+                    )
+                "
+            />
         </header>
 
-        <section class="grid gap-6 xl:grid-cols-[1fr_2fr]">
-            <form
-                class="rounded-3xl border bg-white p-4 shadow-sm sm:p-6"
-                @submit.prevent="guardar"
+        <section
+            class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+        >
+            <article
+                v-for="usuario in usuarios.data"
+                :key="usuario.id"
+                class="rounded-2xl border bg-white p-4 transition hover:-translate-y-1 hover:shadow-md"
             >
-                <h2 class="text-lg font-black">Editar usuario</h2>
-                <div class="mt-3 space-y-3">
-                    <input
-                        v-model="form.name"
-                        type="text"
-                        placeholder="Nombre"
-                        class="h-11 w-full rounded-xl border px-3 text-sm"
-                    />
-                    <input
-                        v-model="form.email"
-                        type="email"
-                        placeholder="Correo"
-                        class="h-11 w-full rounded-xl border px-3 text-sm"
-                    />
-                    <select
-                        v-model="form.rol"
-                        class="h-11 w-full rounded-xl border px-3 text-sm"
-                    >
-                        <option v-for="rol in roles" :key="rol" :value="rol">
-                            {{ rol }}
-                        </option>
-                    </select>
+                <p class="font-black">{{ usuario.name }}</p>
+                <p class="text-xs text-neutral-500">{{ usuario.email }}</p>
+                <p
+                    class="mt-2 inline-flex rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold uppercase"
+                >
+                    {{ usuario.rol }}
+                </p>
+
+                <div class="mt-4 flex gap-2">
                     <button
-                        type="submit"
-                        class="rounded-full bg-[var(--brand-blue)] px-5 py-2 text-sm font-bold text-white transition hover:brightness-90"
-                        :disabled="!editandoId"
+                        type="button"
+                        class="rounded-full border px-3 py-1 text-xs"
+                        @click="modalEditar(usuario)"
                     >
-                        Guardar cambios
+                        Editar
+                    </button>
+                    <button
+                        type="button"
+                        class="rounded-full bg-red-500 px-3 py-1 text-xs text-white"
+                        @click="eliminar(usuario.id)"
+                    >
+                        Eliminar
                     </button>
                 </div>
-            </form>
-
-            <div class="rounded-3xl border bg-white p-4 shadow-sm sm:p-6">
-                <div
-                    class="mb-4 flex flex-wrap items-center justify-between gap-3"
-                >
-                    <h2 class="text-lg font-black">Usuarios</h2>
-                    <input
-                        :value="filters.search || ''"
-                        type="text"
-                        placeholder="Buscar..."
-                        class="h-10 rounded-xl border px-3 text-sm"
-                        @input="
-                            router.get(
-                                '/admin/usuarios',
-                                {
-                                    search: ($event.target as HTMLInputElement)
-                                        .value,
-                                },
-                                { preserveState: true, replace: true },
-                            )
-                        "
-                    />
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-                    <article
-                        v-for="usuario in usuarios.data"
-                        :key="usuario.id"
-                        class="rounded-2xl border p-4 transition hover:-translate-y-1 hover:shadow-md"
-                    >
-                        <p class="font-black">{{ usuario.name }}</p>
-                        <p class="text-xs text-neutral-500">
-                            {{ usuario.email }}
-                        </p>
-                        <p
-                            class="mt-2 inline-flex rounded-full bg-neutral-100 px-3 py-1 text-xs font-semibold uppercase"
-                        >
-                            {{ usuario.rol }}
-                        </p>
-
-                        <div class="mt-4 flex gap-2">
-                            <button
-                                type="button"
-                                class="rounded-full border px-3 py-1 text-xs"
-                                @click="editar(usuario)"
-                            >
-                                Editar
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded-full bg-red-500 px-3 py-1 text-xs text-white"
-                                @click="eliminar(usuario.id)"
-                            >
-                                Eliminar
-                            </button>
-                        </div>
-                    </article>
-                </div>
-            </div>
+            </article>
         </section>
     </div>
 </template>

@@ -9,7 +9,6 @@ interface Pedido {
     folio: string;
     estatus: string;
     total: number | string;
-    created_at: string;
     nombre_cliente: string;
     correo_cliente: string;
     items: Array<{ id: number; cantidad: number }>;
@@ -52,26 +51,29 @@ const totalVentas = computed(() =>
     props.pedidos.data.reduce((acc, pedido) => acc + Number(pedido.total), 0),
 );
 
-const actualizarEstatus = async (pedido: Pedido, estatus: string) => {
-    if (pedido.estatus === estatus) {
-        return;
-    }
-
+const actualizarEstatus = async (pedido: Pedido) => {
     const result = await Swal.fire({
-        title: '¿Actualizar estatus?',
-        text: `${pedido.folio} → ${estatus}`,
-        icon: 'question',
+        title: `Actualizar ${pedido.folio}`,
+        input: 'select',
+        inputOptions: props.estatusDisponibles.reduce(
+            (acc, item) => ({ ...acc, [item]: item }),
+            {},
+        ),
+        inputValue: pedido.estatus,
         showCancelButton: true,
-        confirmButtonText: 'Actualizar',
+        confirmButtonText: 'Guardar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#30beef',
     });
 
-    if (!result.isConfirmed) {
+    if (
+        !result.isConfirmed ||
+        !result.value ||
+        result.value === pedido.estatus
+    ) {
         return;
     }
 
-    form.estatus = estatus;
+    form.estatus = result.value;
     form.patch(`/admin/pedidos/${pedido.id}/estatus`, { preserveScroll: true });
 };
 </script>
@@ -96,9 +98,7 @@ const actualizarEstatus = async (pedido: Pedido, estatus: string) => {
                     </p>
                 </article>
                 <article class="rounded-2xl bg-white p-4 shadow-sm">
-                    <p class="text-xs text-neutral-500 uppercase">
-                        Filtro activo
-                    </p>
+                    <p class="text-xs text-neutral-500 uppercase">Filtro</p>
                     <p class="text-2xl font-black">
                         {{ filters.estatus || 'Todos' }}
                     </p>
@@ -180,24 +180,13 @@ const actualizarEstatus = async (pedido: Pedido, estatus: string) => {
                     </p>
                 </div>
 
-                <select
-                    class="mt-4 h-10 w-full rounded-xl border px-3 text-sm"
-                    :value="pedido.estatus"
-                    @change="
-                        actualizarEstatus(
-                            pedido,
-                            ($event.target as HTMLSelectElement).value,
-                        )
-                    "
+                <button
+                    type="button"
+                    class="mt-4 w-full rounded-full bg-[var(--brand-blue)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-90"
+                    @click="actualizarEstatus(pedido)"
                 >
-                    <option
-                        v-for="estatus in estatusDisponibles"
-                        :key="estatus"
-                        :value="estatus"
-                    >
-                        {{ estatus }}
-                    </option>
-                </select>
+                    Cambiar estatus
+                </button>
             </article>
         </div>
     </div>
