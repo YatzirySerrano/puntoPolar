@@ -18,6 +18,9 @@ createInertiaApp({
             case name.startsWith('settings/'):
                 return [AppLayout, SettingsLayout];
             case name === 'Dashboard':
+            case name.startsWith('Admin/'):
+            case name.startsWith('Cliente/'):
+            case name.startsWith('Vendedor/'):
                 return AppLayout;
             default:
                 return null;

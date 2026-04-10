@@ -1,0 +1,71 @@
+<script setup lang="ts">
+import { Head, useForm } from '@inertiajs/vue3';
+import { useCurrency } from '@/composables/useCurrency';
+
+interface Pedido {
+    id: number;
+    folio: string;
+    estatus: string;
+    total: number | string;
+    nombre_cliente: string;
+}
+
+const props = defineProps<{
+    pedidos: { data: Pedido[] };
+    estatusDisponibles: string[];
+}>();
+
+const { formatCurrency } = useCurrency();
+const form = useForm({ estatus: '' });
+
+const actualizarEstatus = (pedidoId: number, estatus: string) => {
+    form.estatus = estatus;
+    form.patch(`/vendedor/pedidos/${pedidoId}/estatus`, {
+        preserveScroll: true,
+    });
+};
+</script>
+
+<template>
+    <Head title="Vendedor · Pedidos" />
+
+    <div class="space-y-6 p-4 sm:p-6 lg:p-8">
+        <header class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+            <h1 class="text-2xl font-black">Pedidos operativos</h1>
+            <p class="text-sm text-neutral-500">Módulo para vendedores.</p>
+        </header>
+
+        <div class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            <article
+                v-for="pedido in props.pedidos.data"
+                :key="pedido.id"
+                class="rounded-2xl border bg-white p-5 shadow-sm"
+            >
+                <p class="text-xs text-neutral-500">{{ pedido.folio }}</p>
+                <p class="font-black">{{ pedido.nombre_cliente }}</p>
+                <p class="mt-1 text-lg font-black">
+                    {{ formatCurrency(pedido.total) }}
+                </p>
+
+                <select
+                    class="mt-4 h-10 w-full rounded-xl border px-3 text-sm"
+                    :value="pedido.estatus"
+                    @change="
+                        actualizarEstatus(
+                            pedido.id,
+                            ($event.target as HTMLSelectElement).value,
+                        )
+                    "
+                >
+                    <option
+                        v-for="estatus in estatusDisponibles"
+                        :key="estatus"
+                        :value="estatus"
+                    >
+                        {{ estatus }}
+                    </option>
+                </select>
+            </article>
+        </div>
+    </div>
+</template>
