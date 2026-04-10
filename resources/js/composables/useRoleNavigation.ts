@@ -2,10 +2,7 @@ import {
     ClipboardList,
     LayoutGrid,
     Package,
-    Settings,
     ShieldCheck,
-    ShoppingCart,
-    Store,
     Users,
 } from 'lucide-vue-next';
 import type { NavItem } from '@/types';
