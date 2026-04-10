@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import Swal from 'sweetalert2';
+import { computed, onMounted, ref, watch } from 'vue';
 
 interface Usuario {
     id: number;
@@ -8,6 +9,30 @@ interface Usuario {
     email: string;
     rol: 'cliente' | 'vendedor' | 'admin';
 }
+
+const page = usePage();
+
+const mostrarFlash = () => {
+    const ok = page.props.flash?.success;
+    const err = page.props.flash?.error;
+
+    if (ok) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Éxito',
+            text: String(ok),
+            timer: 1800,
+            showConfirmButton: false,
+        });
+    }
+
+    if (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: String(err) });
+    }
+};
+
+onMounted(mostrarFlash);
+watch(() => page.props.flash, mostrarFlash, { deep: true });
 
 const props = defineProps<{
     usuarios: { data: Usuario[] };
@@ -49,8 +74,18 @@ const guardar = () => {
     });
 };
 
-const eliminar = (id: number) => {
-    if (!confirm('¿Eliminar usuario?')) {
+const eliminar = async (id: number) => {
+    const result = await Swal.fire({
+        title: '¿Eliminar usuario?',
+        text: 'No podrás revertir esta acción.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444',
+    });
+
+    if (!result.isConfirmed) {
         return;
     }
 

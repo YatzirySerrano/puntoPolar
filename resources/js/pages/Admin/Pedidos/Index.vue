@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { computed } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import Swal from 'sweetalert2';
+import { computed, onMounted, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 
 interface Pedido {
@@ -13,6 +14,30 @@ interface Pedido {
     correo_cliente: string;
     items: Array<{ id: number; cantidad: number }>;
 }
+
+const page = usePage();
+
+const mostrarFlash = () => {
+    const ok = page.props.flash?.success;
+    const err = page.props.flash?.error;
+
+    if (ok) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Éxito',
+            text: String(ok),
+            timer: 1800,
+            showConfirmButton: false,
+        });
+    }
+
+    if (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: String(err) });
+    }
+};
+
+onMounted(mostrarFlash);
+watch(() => page.props.flash, mostrarFlash, { deep: true });
 
 const props = defineProps<{
     pedidos: { data: Pedido[] };
@@ -27,7 +52,25 @@ const totalVentas = computed(() =>
     props.pedidos.data.reduce((acc, pedido) => acc + Number(pedido.total), 0),
 );
 
-const actualizarEstatus = (pedido: Pedido, estatus: string) => {
+const actualizarEstatus = async (pedido: Pedido, estatus: string) => {
+    if (pedido.estatus === estatus) {
+        return;
+    }
+
+    const result = await Swal.fire({
+        title: '¿Actualizar estatus?',
+        text: `${pedido.folio} → ${estatus}`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Actualizar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#30beef',
+    });
+
+    if (!result.isConfirmed) {
+        return;
+    }
+
     form.estatus = estatus;
     form.patch(`/admin/pedidos/${pedido.id}/estatus`, { preserveScroll: true });
 };

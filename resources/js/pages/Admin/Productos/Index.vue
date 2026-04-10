@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head, router, useForm } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import Swal from 'sweetalert2';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 
 interface Producto {
@@ -31,6 +32,28 @@ const props = defineProps<{
 
 const { formatCurrency } = useCurrency();
 const editandoId = ref<number | null>(null);
+const page = usePage();
+const mostrarFlash = () => {
+    const ok = page.props.flash?.success;
+    const err = page.props.flash?.error;
+
+    if (ok) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Éxito',
+            text: String(ok),
+            timer: 1800,
+            showConfirmButton: false,
+        });
+    }
+
+    if (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: String(err) });
+    }
+};
+
+onMounted(mostrarFlash);
+watch(() => page.props.flash, mostrarFlash, { deep: true });
 
 const totalStock = computed(() =>
     props.productos.data.reduce((acc, item) => acc + item.stock, 0),
@@ -84,8 +107,18 @@ const editar = (producto: Producto) => {
     form.activo = producto.activo;
 };
 
-const eliminar = (id: number) => {
-    if (!confirm('¿Deseas eliminar este producto?')) {
+const eliminar = async (id: number) => {
+    const result = await Swal.fire({
+        title: '¿Eliminar producto?',
+        text: 'Esta acción no se puede deshacer.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444',
+    });
+
+    if (!result.isConfirmed) {
         return;
     }
 

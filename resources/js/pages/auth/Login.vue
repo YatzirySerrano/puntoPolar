@@ -14,8 +14,8 @@ import { request } from '@/routes/password';
 
 defineOptions({
     layout: {
-        title: 'Log in to your account',
-        description: 'Enter your email and password below to log in',
+        title: 'Bienvenido de vuelta',
+        description: 'Ingresa para administrar tu cuenta y pedidos.',
     },
 });
 
@@ -31,7 +31,7 @@ defineProps<{
 
     <div
         v-if="status"
-        class="mb-4 text-center text-sm font-medium text-green-600"
+        class="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-center text-sm font-medium text-green-700"
     >
         {{ status }}
     </div>
@@ -40,11 +40,24 @@ defineProps<{
         v-bind="store.form()"
         :reset-on-success="['password']"
         v-slot="{ errors, processing }"
-        class="flex flex-col gap-6"
+        class="space-y-6"
     >
-        <div class="grid gap-6">
+        <div
+            class="rounded-2xl border border-[var(--brand-gray)]/70 bg-white p-5 shadow-sm"
+        >
+            <p
+                class="text-xs font-bold tracking-[0.2em] text-neutral-400 uppercase"
+            >
+                Acceso seguro
+            </p>
+            <p class="mt-1 text-sm text-neutral-500">
+                Admin, vendedor y cliente acceden con su cuenta autorizada.
+            </p>
+        </div>
+
+        <div class="grid gap-4">
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email">Correo electrónico</Label>
                 <Input
                     id="email"
                     type="email"
@@ -53,21 +66,22 @@ defineProps<{
                     autofocus
                     :tabindex="1"
                     autocomplete="email"
-                    placeholder="email@example.com"
+                    placeholder="email@ejemplo.com"
+                    class="h-11"
                 />
                 <InputError :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
                 <div class="flex items-center justify-between">
-                    <Label for="password">Password</Label>
+                    <Label for="password">Contraseña</Label>
                     <TextLink
                         v-if="canResetPassword"
                         :href="request()"
                         class="text-sm"
                         :tabindex="5"
                     >
-                        Forgot password?
+                        ¿Olvidaste tu contraseña?
                     </TextLink>
                 </div>
                 <PasswordInput
@@ -76,27 +90,30 @@ defineProps<{
                     required
                     :tabindex="2"
                     autocomplete="current-password"
-                    placeholder="Password"
+                    placeholder="Contraseña"
+                    class="h-11"
                 />
                 <InputError :message="errors.password" />
             </div>
 
-            <div class="flex items-center justify-between">
+            <div
+                class="flex items-center justify-between rounded-xl bg-neutral-50 px-3 py-2"
+            >
                 <Label for="remember" class="flex items-center space-x-3">
                     <Checkbox id="remember" name="remember" :tabindex="3" />
-                    <span>Remember me</span>
+                    <span>Recordarme</span>
                 </Label>
             </div>
 
             <Button
                 type="submit"
-                class="mt-4 w-full"
+                class="mt-2 h-11 w-full bg-gradient-to-r from-[var(--brand-blue)] to-[var(--brand-green)] font-black text-white transition hover:scale-[1.01]"
                 :tabindex="4"
                 :disabled="processing"
                 data-test="login-button"
             >
                 <Spinner v-if="processing" />
-                Log in
+                Entrar
             </Button>
         </div>
 
@@ -104,8 +121,8 @@ defineProps<{
             class="text-center text-sm text-muted-foreground"
             v-if="canRegister"
         >
-            Don't have an account?
-            <TextLink :href="register()" :tabindex="5">Sign up</TextLink>
+            ¿No tienes cuenta?
+            <TextLink :href="register()" :tabindex="5">Regístrate</TextLink>
         </div>
     </Form>
 </template>
