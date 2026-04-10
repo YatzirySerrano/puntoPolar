@@ -2,7 +2,10 @@ import {
     ClipboardList,
     LayoutGrid,
     Package,
+    Settings,
     ShieldCheck,
+    ShoppingCart,
+    House,
     Users,
 } from 'lucide-vue-next';
 import type { NavItem } from '@/types';
@@ -16,7 +19,7 @@ const commonItems: NavItem[] = [
     {
         title: 'Tienda pública',
         href: '/',
-        icon: Store,
+        icon: House,
     },
     {
         title: 'Carrito',
