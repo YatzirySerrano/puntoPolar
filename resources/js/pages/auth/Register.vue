@@ -12,8 +12,9 @@ import { store } from '@/routes/register';
 
 defineOptions({
     layout: {
-        title: 'Create an account',
-        description: 'Enter your details below to create your account',
+        title: 'Crea tu cuenta',
+        description:
+            'Regístrate como cliente para comprar y dar seguimiento a tus pedidos.',
     },
 });
 </script>
@@ -25,11 +26,24 @@ defineOptions({
         v-bind="store.form()"
         :reset-on-success="['password', 'password_confirmation']"
         v-slot="{ errors, processing }"
-        class="flex flex-col gap-6"
+        class="space-y-6"
     >
-        <div class="grid gap-6">
+        <div
+            class="rounded-2xl border border-[var(--brand-gray)]/70 bg-white p-5 shadow-sm"
+        >
+            <p
+                class="text-xs font-bold tracking-[0.2em] text-neutral-400 uppercase"
+            >
+                Registro seguro
+            </p>
+            <p class="mt-1 text-sm text-neutral-500">
+                El rol se asigna automáticamente como <strong>cliente</strong>.
+            </p>
+        </div>
+
+        <div class="grid gap-4">
             <div class="grid gap-2">
-                <Label for="name">Name</Label>
+                <Label for="name">Nombre</Label>
                 <Input
                     id="name"
                     type="text"
@@ -38,13 +52,14 @@ defineOptions({
                     :tabindex="1"
                     autocomplete="name"
                     name="name"
-                    placeholder="Full name"
+                    placeholder="Nombre completo"
+                    class="h-11"
                 />
                 <InputError :message="errors.name" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="email">Email address</Label>
+                <Label for="email">Correo electrónico</Label>
                 <Input
                     id="email"
                     type="email"
@@ -52,56 +67,59 @@ defineOptions({
                     :tabindex="2"
                     autocomplete="email"
                     name="email"
-                    placeholder="email@example.com"
+                    placeholder="email@ejemplo.com"
+                    class="h-11"
                 />
                 <InputError :message="errors.email" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="password">Password</Label>
+                <Label for="password">Contraseña</Label>
                 <PasswordInput
                     id="password"
                     required
                     :tabindex="3"
                     autocomplete="new-password"
                     name="password"
-                    placeholder="Password"
+                    placeholder="Tu contraseña"
+                    class="h-11"
                 />
                 <InputError :message="errors.password" />
             </div>
 
             <div class="grid gap-2">
-                <Label for="password_confirmation">Confirm password</Label>
+                <Label for="password_confirmation">Confirmar contraseña</Label>
                 <PasswordInput
                     id="password_confirmation"
                     required
                     :tabindex="4"
                     autocomplete="new-password"
                     name="password_confirmation"
-                    placeholder="Confirm password"
+                    placeholder="Confirma tu contraseña"
+                    class="h-11"
                 />
                 <InputError :message="errors.password_confirmation" />
             </div>
 
             <Button
                 type="submit"
-                class="mt-2 w-full"
+                class="mt-2 h-11 w-full bg-gradient-to-r from-[var(--brand-green)] to-[var(--brand-blue)] font-black text-white transition hover:scale-[1.01]"
                 tabindex="5"
                 :disabled="processing"
                 data-test="register-user-button"
             >
                 <Spinner v-if="processing" />
-                Create account
+                Crear cuenta
             </Button>
         </div>
 
         <div class="text-center text-sm text-muted-foreground">
-            Already have an account?
+            ¿Ya tienes cuenta?
             <TextLink
                 :href="login()"
                 class="underline underline-offset-4"
                 :tabindex="6"
-                >Log in</TextLink
+                >Inicia sesión</TextLink
             >
         </div>
     </Form>
