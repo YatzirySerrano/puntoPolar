@@ -12,8 +12,6 @@ interface Producto {
     destacado: boolean;
     activo: boolean;
     visible: boolean;
-    categoria?: { nombre: string } | null;
-    marca?: { nombre: string } | null;
 }
 
 interface OptionItem {
@@ -21,7 +19,7 @@ interface OptionItem {
     nombre: string;
 }
 
-defineProps<{
+const props = defineProps<{
     productos: {
         data: Producto[];
         links: Array<{ url: string | null; label: string; active: boolean }>;
@@ -33,6 +31,13 @@ defineProps<{
 
 const { formatCurrency } = useCurrency();
 const editandoId = ref<number | null>(null);
+
+const totalStock = computed(() =>
+    props.productos.data.reduce((acc, item) => acc + item.stock, 0),
+);
+const totalInventario = computed(() =>
+    props.productos.data.reduce((acc, item) => acc + Number(item.precio), 0),
+);
 
 const form = useForm({
     nombre: '',
@@ -97,16 +102,49 @@ const resetForm = () => {
     <Head title="Admin · Productos" />
 
     <div class="space-y-6 p-4 sm:p-6 lg:p-8">
-        <header class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-            <h1 class="text-2xl font-black">Gestión de productos</h1>
+        <header
+            class="rounded-3xl border border-[var(--brand-gray)]/60 bg-gradient-to-r from-white to-[var(--brand-soft)] p-5 shadow-sm sm:p-6"
+        >
+            <h1 class="text-2xl font-black sm:text-3xl">
+                Gestión de productos
+            </h1>
             <p class="text-sm text-neutral-500">
-                CRUD administrativo para catálogo.
+                Controla catálogo, inventario y estado de visibilidad.
             </p>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <article class="rounded-2xl bg-white p-4 shadow-sm">
+                    <p class="text-xs text-neutral-500 uppercase">Productos</p>
+                    <p class="text-2xl font-black">
+                        {{ productos.data.length }}
+                    </p>
+                </article>
+                <article class="rounded-2xl bg-white p-4 shadow-sm">
+                    <p class="text-xs text-neutral-500 uppercase">
+                        Stock total
+                    </p>
+                    <p class="text-2xl font-black">{{ totalStock }}</p>
+                </article>
+                <article class="rounded-2xl bg-white p-4 shadow-sm">
+                    <p class="text-xs text-neutral-500 uppercase">
+                        Valor listado
+                    </p>
+                    <p class="text-2xl font-black">
+                        {{ formatCurrency(totalInventario) }}
+                    </p>
+                </article>
+                <article class="rounded-2xl bg-white p-4 shadow-sm">
+                    <p class="text-xs text-neutral-500 uppercase">Destacados</p>
+                    <p class="text-2xl font-black">
+                        {{ productos.data.filter((p) => p.destacado).length }}
+                    </p>
+                </article>
+            </div>
         </header>
 
-        <section class="grid gap-6 xl:grid-cols-[1.2fr_2fr]">
+        <section class="grid gap-6 xl:grid-cols-[1.15fr_2fr]">
             <form
-                class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6"
+                class="rounded-3xl border bg-white p-4 shadow-sm sm:p-6"
                 @submit.prevent="submit"
             >
                 <h2 class="text-lg font-black">
@@ -191,13 +229,13 @@ const resetForm = () => {
                 <div class="mt-4 flex gap-2">
                     <button
                         type="submit"
-                        class="rounded-full bg-[var(--brand-blue)] px-5 py-2 text-sm font-bold text-white"
+                        class="rounded-full bg-[var(--brand-blue)] px-5 py-2 text-sm font-bold text-white transition hover:brightness-90"
                     >
                         Guardar
                     </button>
                     <button
                         type="button"
-                        class="rounded-full border px-5 py-2 text-sm font-bold"
+                        class="rounded-full border px-5 py-2 text-sm font-bold transition hover:bg-neutral-100"
                         @click="resetForm"
                     >
                         Cancelar
@@ -205,7 +243,7 @@ const resetForm = () => {
                 </div>
             </form>
 
-            <div class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+            <div class="rounded-3xl border bg-white p-4 shadow-sm sm:p-6">
                 <div
                     class="mb-4 flex flex-wrap items-center justify-between gap-3"
                 >
@@ -228,7 +266,40 @@ const resetForm = () => {
                     />
                 </div>
 
-                <div class="overflow-x-auto">
+                <div class="grid gap-3 xl:hidden">
+                    <article
+                        v-for="producto in productos.data"
+                        :key="producto.id"
+                        class="rounded-2xl border p-4"
+                    >
+                        <p class="font-black">{{ producto.nombre }}</p>
+                        <p class="text-xs text-neutral-500">
+                            {{ producto.sku }}
+                        </p>
+                        <p class="mt-2 text-sm">
+                            {{ formatCurrency(producto.precio) }} · Stock
+                            {{ producto.stock }}
+                        </p>
+                        <div class="mt-3 flex gap-2">
+                            <button
+                                type="button"
+                                class="rounded-full border px-3 py-1 text-xs"
+                                @click="editar(producto)"
+                            >
+                                Editar
+                            </button>
+                            <button
+                                type="button"
+                                class="rounded-full bg-red-500 px-3 py-1 text-xs text-white"
+                                @click="eliminar(producto.id)"
+                            >
+                                Eliminar
+                            </button>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="hidden overflow-x-auto xl:block">
                     <table class="min-w-full text-sm">
                         <thead
                             class="bg-neutral-50 text-left text-xs text-neutral-500 uppercase"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
 
 interface Pedido {
@@ -13,7 +14,7 @@ interface Pedido {
     items: Array<{ id: number; cantidad: number }>;
 }
 
-defineProps<{
+const props = defineProps<{
     pedidos: { data: Pedido[] };
     estatusDisponibles: string[];
     filters: { estatus?: string };
@@ -21,6 +22,10 @@ defineProps<{
 
 const { formatCurrency } = useCurrency();
 const form = useForm({ estatus: '' });
+
+const totalVentas = computed(() =>
+    props.pedidos.data.reduce((acc, pedido) => acc + Number(pedido.total), 0),
+);
 
 const actualizarEstatus = (pedido: Pedido, estatus: string) => {
     form.estatus = estatus;
@@ -32,9 +37,32 @@ const actualizarEstatus = (pedido: Pedido, estatus: string) => {
     <Head title="Admin · Pedidos" />
 
     <div class="space-y-6 p-4 sm:p-6 lg:p-8">
-        <header class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
-            <h1 class="text-2xl font-black">Gestión de pedidos</h1>
-            <div class="mt-3 flex flex-wrap gap-2">
+        <header
+            class="rounded-3xl border border-[var(--brand-gray)]/60 bg-gradient-to-r from-white to-[var(--brand-soft)] p-5 shadow-sm sm:p-6"
+        >
+            <h1 class="text-2xl font-black sm:text-3xl">Gestión de pedidos</h1>
+            <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                <article class="rounded-2xl bg-white p-4 shadow-sm">
+                    <p class="text-xs text-neutral-500 uppercase">Pedidos</p>
+                    <p class="text-2xl font-black">{{ pedidos.data.length }}</p>
+                </article>
+                <article class="rounded-2xl bg-white p-4 shadow-sm">
+                    <p class="text-xs text-neutral-500 uppercase">Ventas</p>
+                    <p class="text-2xl font-black">
+                        {{ formatCurrency(totalVentas) }}
+                    </p>
+                </article>
+                <article class="rounded-2xl bg-white p-4 shadow-sm">
+                    <p class="text-xs text-neutral-500 uppercase">
+                        Filtro activo
+                    </p>
+                    <p class="text-2xl font-black">
+                        {{ filters.estatus || 'Todos' }}
+                    </p>
+                </article>
+            </div>
+
+            <div class="mt-4 flex flex-wrap gap-2">
                 <button
                     type="button"
                     class="rounded-full border px-4 py-1.5 text-xs font-bold uppercase"
@@ -80,7 +108,7 @@ const actualizarEstatus = (pedido: Pedido, estatus: string) => {
             <article
                 v-for="pedido in pedidos.data"
                 :key="pedido.id"
-                class="rounded-2xl border bg-white p-5 shadow-sm"
+                class="rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
                 <div class="flex items-start justify-between gap-3">
                     <div>

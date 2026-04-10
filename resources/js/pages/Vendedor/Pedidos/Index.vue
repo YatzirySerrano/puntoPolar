@@ -30,7 +30,9 @@ const actualizarEstatus = (pedidoId: number, estatus: string) => {
     <Head title="Vendedor · Pedidos" />
 
     <div class="space-y-6 p-4 sm:p-6 lg:p-8">
-        <header class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+        <header
+            class="rounded-3xl border border-[var(--brand-gray)]/60 bg-gradient-to-r from-white to-[var(--brand-soft)] p-4 shadow-sm sm:p-6"
+        >
             <h1 class="text-2xl font-black">Pedidos operativos</h1>
             <p class="text-sm text-neutral-500">Módulo para vendedores.</p>
         </header>
@@ -39,7 +41,7 @@ const actualizarEstatus = (pedidoId: number, estatus: string) => {
             <article
                 v-for="pedido in props.pedidos.data"
                 :key="pedido.id"
-                class="rounded-2xl border bg-white p-5 shadow-sm"
+                class="rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
                 <p class="text-xs text-neutral-500">{{ pedido.folio }}</p>
                 <p class="font-black">{{ pedido.nombre_cliente }}</p>

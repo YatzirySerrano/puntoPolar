@@ -22,7 +22,9 @@ const { formatCurrency } = useCurrency();
     <Head title="Mis pedidos" />
 
     <div class="space-y-6 p-4 sm:p-6 lg:p-8">
-        <header class="rounded-2xl border bg-white p-4 shadow-sm sm:p-6">
+        <header
+            class="rounded-3xl border border-[var(--brand-gray)]/60 bg-gradient-to-r from-white to-[var(--brand-soft)] p-4 shadow-sm sm:p-6"
+        >
             <h1 class="text-2xl font-black">Mis pedidos</h1>
             <p class="text-sm text-neutral-500">
                 Historial de compras del cliente.
@@ -33,7 +35,7 @@ const { formatCurrency } = useCurrency();
             <article
                 v-for="pedido in pedidos.data"
                 :key="pedido.id"
-                class="rounded-2xl border bg-white p-5 shadow-sm"
+                class="rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
                 <div class="flex items-center justify-between">
                     <p class="font-black">{{ pedido.folio }}</p>
