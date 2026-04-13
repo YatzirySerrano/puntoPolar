@@ -34,6 +34,11 @@ class PedidoController extends Controller
         ]);
     }
 
+    public function show(Pedido $pedido): RedirectResponse
+    {
+        return redirect()->route('admin.pedidos.index')->with('success', 'Detalle de pedido: '.$pedido->folio);
+    }
+
     public function updateStatus(Request $request, Pedido $pedido): RedirectResponse
     {
         $data = $request->validate([

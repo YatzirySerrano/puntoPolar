@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
+import { BookOpen, FolderGit2 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -18,6 +19,8 @@ import type { NavItem } from '@/types';
 const page = usePage();
 const userRole =
     (page.props.auth?.user?.rol as string | undefined) ?? 'cliente';
+
+const mainNavItems: NavItem[] = useRoleNavigation(userRole);
 
 const mainNavItems: NavItem[] = useRoleNavigation(userRole);
 </script>

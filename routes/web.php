@@ -29,21 +29,11 @@ Route::delete('/carrito', [CarritoController::class, 'vaciar'])->name('carrito.v
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('/dashboard', 'Dashboard')->name('dashboard');
 
-    /*
-    |--------------------------------------------------------------------------
-    | CLIENTE / CUENTA
-    |--------------------------------------------------------------------------
-    */
     Route::middleware('role:cliente,admin,vendedor')->group(function () {
         Route::get('/mi-cuenta/pedidos', [MisPedidosController::class, 'index'])
             ->name('cliente.pedidos.index');
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | VENDEDOR
-    |--------------------------------------------------------------------------
-    */
     Route::prefix('vendedor')
         ->name('vendedor.')
         ->middleware('role:vendedor,admin')
@@ -58,20 +48,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('pedidos.estatus');
         });
 
-    /*
-    |--------------------------------------------------------------------------
-    | ADMIN
-    |--------------------------------------------------------------------------
-    */
     Route::prefix('admin')
         ->name('admin.')
         ->middleware('role:admin')
         ->group(function () {
-            /*
-            |--------------------------------------------------------------------------
-            | PRODUCTOS
-            |--------------------------------------------------------------------------
-            */
             Route::get('/productos', [AdminProductoController::class, 'index'])
                 ->name('productos.index');
             Route::post('/productos', [AdminProductoController::class, 'store'])
@@ -83,11 +63,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/productos/{producto}', [AdminProductoController::class, 'destroy'])
                 ->name('productos.destroy');
 
-            /*
-            |--------------------------------------------------------------------------
-            | CATEGORÍAS
-            |--------------------------------------------------------------------------
-            */
             Route::get('/categorias', [AdminCategoriaController::class, 'index'])
                 ->name('categorias.index');
             Route::post('/categorias', [AdminCategoriaController::class, 'store'])
@@ -99,11 +74,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/categorias/{categoria}', [AdminCategoriaController::class, 'destroy'])
                 ->name('categorias.destroy');
 
-            /*
-            |--------------------------------------------------------------------------
-            | MARCAS
-            |--------------------------------------------------------------------------
-            */
             Route::get('/marcas', [AdminMarcaController::class, 'index'])
                 ->name('marcas.index');
             Route::post('/marcas', [AdminMarcaController::class, 'store'])
@@ -115,11 +85,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/marcas/{marca}', [AdminMarcaController::class, 'destroy'])
                 ->name('marcas.destroy');
 
-            /*
-            |--------------------------------------------------------------------------
-            | PEDIDOS
-            |--------------------------------------------------------------------------
-            */
             Route::get('/pedidos', [AdminPedidoController::class, 'index'])
                 ->name('pedidos.index');
             Route::get('/pedidos/{pedido}', [AdminPedidoController::class, 'show'])
@@ -127,11 +92,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('/pedidos/{pedido}/estatus', [AdminPedidoController::class, 'updateStatus'])
                 ->name('pedidos.estatus');
 
-            /*
-            |--------------------------------------------------------------------------
-            | USUARIOS
-            |--------------------------------------------------------------------------
-            */
             Route::get('/usuarios', [AdminUsuarioController::class, 'index'])
                 ->name('usuarios.index');
             Route::get('/usuarios/{user}', [AdminUsuarioController::class, 'show'])
@@ -141,11 +101,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/usuarios/{user}', [AdminUsuarioController::class, 'destroy'])
                 ->name('usuarios.destroy');
 
-            /*
-            |--------------------------------------------------------------------------
-            | CUPONES
-            |--------------------------------------------------------------------------
-            */
             Route::get('/cupones', [AdminCuponController::class, 'index'])
                 ->name('cupones.index');
             Route::post('/cupones', [AdminCuponController::class, 'store'])
@@ -157,11 +112,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/cupones/{cupon}', [AdminCuponController::class, 'destroy'])
                 ->name('cupones.destroy');
 
-            /*
-            |--------------------------------------------------------------------------
-            | BANNERS
-            |--------------------------------------------------------------------------
-            */
             Route::get('/banners', [AdminBannerController::class, 'index'])
                 ->name('banners.index');
             Route::post('/banners', [AdminBannerController::class, 'store'])
@@ -173,11 +123,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/banners/{banner}', [AdminBannerController::class, 'destroy'])
                 ->name('banners.destroy');
 
-            /*
-            |--------------------------------------------------------------------------
-            | MÉTODOS DE PAGO
-            |--------------------------------------------------------------------------
-            */
             Route::get('/metodos-pago', [AdminMetodoPagoController::class, 'index'])
                 ->name('metodos-pago.index');
             Route::post('/metodos-pago', [AdminMetodoPagoController::class, 'store'])
@@ -189,11 +134,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('/metodos-pago/{metodoPago}', [AdminMetodoPagoController::class, 'destroy'])
                 ->name('metodos-pago.destroy');
 
-            /*
-            |--------------------------------------------------------------------------
-            | PAGOS
-            |--------------------------------------------------------------------------
-            */
             Route::get('/pagos', [AdminPagoController::class, 'index'])
                 ->name('pagos.index');
             Route::get('/pagos/{pago}', [AdminPagoController::class, 'show'])
@@ -201,11 +141,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('/pagos/{pago}', [AdminPagoController::class, 'update'])
                 ->name('pagos.update');
 
-            /*
-            |--------------------------------------------------------------------------
-            | CONFIGURACIONES
-            |--------------------------------------------------------------------------
-            */
             Route::get('/configuraciones', [AdminConfiguracionController::class, 'index'])
                 ->name('configuraciones.index');
             Route::put('/configuraciones/{configuracion}', [AdminConfiguracionController::class, 'update'])
@@ -213,4 +148,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
         });
 });
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';

@@ -62,6 +62,11 @@ class ProductoController extends Controller
         return back()->with('success', 'Producto creado correctamente.');
     }
 
+    public function show(Producto $producto): RedirectResponse
+    {
+        return redirect()->route('admin.productos.index')->with('success', 'Detalle de producto: '.$producto->nombre);
+    }
+
     public function update(Request $request, Producto $producto): RedirectResponse
     {
         $data = $request->validate([

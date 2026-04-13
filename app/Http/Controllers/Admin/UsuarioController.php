@@ -33,6 +33,11 @@ class UsuarioController extends Controller
         ]);
     }
 
+    public function show(User $user): RedirectResponse
+    {
+        return redirect()->route('admin.usuarios.index')->with('success', 'Detalle de usuario: '.$user->name);
+    }
+
     public function update(Request $request, User $user): RedirectResponse
     {
         $data = $request->validate([
