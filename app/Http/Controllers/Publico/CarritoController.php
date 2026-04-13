@@ -47,7 +47,7 @@ class CarritoController extends Controller
             ->findOrFail($data['producto_id']);
 
         if ($producto->stock < $cantidad) {
-            return back()->with('error', 'No hay stock suficiente disponible.');
+            return back()->with('error', 'No hay stock suficiente para '.$producto->nombre.'.');
         }
 
         $carrito = session()->get('carrito', []);
@@ -78,7 +78,7 @@ class CarritoController extends Controller
 
         session()->put('carrito', $carrito);
 
-        return back()->with('success', 'Producto agregado al carrito.');
+        return back()->with('success', $producto->nombre.' se agregó correctamente al carrito.');
     }
 
     public function actualizar(Request $request, Producto $producto): RedirectResponse
@@ -103,7 +103,7 @@ class CarritoController extends Controller
 
         session()->put('carrito', $carrito);
 
-        return back()->with('success', 'Cantidad actualizada.');
+        return back()->with('success', 'Actualizamos la cantidad de '.$producto->nombre.'.');
     }
 
     public function eliminar(Producto $producto): RedirectResponse
@@ -112,13 +112,13 @@ class CarritoController extends Controller
         unset($carrito[(string) $producto->id]);
         session()->put('carrito', $carrito);
 
-        return back()->with('success', 'Producto eliminado del carrito.');
+        return back()->with('success', $producto->nombre.' fue eliminado del carrito.');
     }
 
     public function vaciar(): RedirectResponse
     {
         session()->forget('carrito');
 
-        return back()->with('success', 'Carrito vaciado.');
+        return back()->with('success', 'Tu carrito se vació correctamente.');
     }
 }
