@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
+import { ref } from 'vue';
 
 interface Producto {
     id: number;
@@ -17,6 +18,8 @@ const props = defineProps<{
     producto: Producto;
 }>();
 
+const animando = ref(false);
+
 const formatearMoneda = (valor: number | string) => {
     return new Intl.NumberFormat('es-MX', {
         style: 'currency',
@@ -25,6 +28,8 @@ const formatearMoneda = (valor: number | string) => {
 };
 
 const agregarAlCarrito = () => {
+    animando.value = true;
+
     router.post(
         '/carrito/agregar',
         {
@@ -33,6 +38,11 @@ const agregarAlCarrito = () => {
         },
         {
             preserveScroll: true,
+            onFinish: () => {
+                setTimeout(() => {
+                    animando.value = false;
+                }, 900);
+            },
         },
     );
 };
@@ -98,10 +108,11 @@ const agregarAlCarrito = () => {
                         <button
                             type="button"
                             class="rounded-full bg-[var(--brand-green)] px-4 py-2 text-sm font-bold text-white transition hover:scale-[1.02] hover:brightness-95 disabled:cursor-not-allowed disabled:bg-[var(--brand-gray)]"
+                            :class="animando ? 'animate-pulse' : ''"
                             :disabled="producto.stock < 1"
                             @click="agregarAlCarrito"
                         >
-                            Añadir
+                            {{ animando ? 'Agregando…' : 'Añadir' }}
                         </button>
                     </div>
                 </div>

@@ -4,12 +4,17 @@ import logo from '@/img/logo.png';
 
 defineProps<{
     carritoCantidad: number;
+    authUser?: {
+        id: number;
+        name: string;
+        rol?: string;
+    } | null;
 }>();
 </script>
 
 <template>
     <header
-        class="sticky top-0 z-50 border-b border-[var(--brand-gray)]/70 bg-white/90 backdrop-blur-md"
+        class="z-40 border-b border-[var(--brand-gray)]/70 bg-white/95 backdrop-blur-md"
     >
         <div class="border-b border-[var(--brand-gray)]/40">
             <div
@@ -50,10 +55,15 @@ defineProps<{
                         >Carrito</Link
                     >
                     <Link
-                        href="/login"
-                        class="transition hover:text-[var(--brand-blue)]"
-                        >Mi cuenta</Link
+                        :href="authUser ? '/dashboard' : '/login'"
+                        class="rounded-full border px-3 py-1 text-[10px] font-bold transition hover:border-[var(--brand-blue)] hover:text-[var(--brand-blue)]"
                     >
+                        {{
+                            authUser
+                                ? `Hola, ${authUser.name}`
+                                : 'Iniciar sesión'
+                        }}
+                    </Link>
                 </div>
             </div>
         </div>
