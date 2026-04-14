@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -14,35 +15,89 @@ class CarritoController extends Controller
 {
     public function index(): Response
     {
-        $carrito = collect(session()->get('carrito', []))
-            ->map(function (array $item) {
-                $item['imagen'] = $this->resolveImageUrl($item['imagen'] ?? null);
-                $item['precio'] = round((float) ($item['precio'] ?? 0), 2);
-                $item['precio_comparacion'] = isset($item['precio_comparacion'])
-                    ? round((float) $item['precio_comparacion'], 2)
-                    : null;
-                $item['subtotal'] = round((float) ($item['subtotal'] ?? 0), 2);
-                $item['cantidad'] = (int) ($item['cantidad'] ?? 0);
-                $item['stock'] = (int) ($item['stock'] ?? 0);
+        $carrito = collect(session()->get('carrito', []));
 
-                return $item;
-            })
+        if ($carrito->isEmpty()) {
+            return Inertia::render('Tienda/Carrito', [
+                'items' => [],
+                'resumen' => [
+                    'subtotal' => 0,
+                    'envio' => 0,
+                    'descuento' => 0,
+                    'total' => 0,
+                    'total_productos' => 0,
+                ],
+            ]);
+        }
+
+        $productoIds = $carrito
+            ->pluck('producto_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
             ->values();
 
-        $subtotal = $carrito->sum('subtotal');
-        $envio = 0;
-        $descuento = 0;
+        $productos = Producto::query()
+            ->with(['imagenes:id,producto_id,ruta,orden'])
+            ->whereIn('id', $productoIds)
+            ->get()
+            ->keyBy('id');
+
+        $items = $carrito
+            ->map(function (array $item) use ($productos) {
+                $productoId = (int) ($item['producto_id'] ?? 0);
+                $cantidad = max(1, (int) ($item['cantidad'] ?? 1));
+
+                /** @var \App\Models\Producto|null $producto */
+                $producto = $productos->get($productoId);
+
+                if (! $producto) {
+                    return null;
+                }
+
+                $precio = (float) $producto->precio;
+                $stock = max(0, (int) $producto->stock);
+
+                if ($stock < 1) {
+                    return null;
+                }
+
+                if ($cantidad > $stock) {
+                    $cantidad = $stock;
+                }
+
+                return [
+                    'producto_id' => $producto->id,
+                    'nombre' => $producto->nombre,
+                    'slug' => $producto->slug,
+                    'sku' => $producto->sku,
+                    'imagen' => $this->resolveProductoImage($producto),
+                    'precio' => round($precio, 2),
+                    'precio_comparacion' => $producto->precio_comparacion !== null
+                        ? round((float) $producto->precio_comparacion, 2)
+                        : null,
+                    'cantidad' => $cantidad,
+                    'stock' => $stock,
+                    'subtotal' => round($precio * $cantidad, 2),
+                ];
+            })
+            ->filter()
+            ->values();
+
+        $this->syncSessionFromItems($items);
+
+        $subtotal = (float) $items->sum('subtotal');
+        $envio = 0.0;
+        $descuento = 0.0;
         $total = $subtotal + $envio - $descuento;
-        $totalProductos = $carrito->sum('cantidad');
 
         return Inertia::render('Tienda/Carrito', [
-            'items' => $carrito,
+            'items' => $items,
             'resumen' => [
                 'subtotal' => round($subtotal, 2),
                 'envio' => round($envio, 2),
                 'descuento' => round($descuento, 2),
                 'total' => round($total, 2),
-                'total_productos' => (int) $totalProductos,
+                'total_productos' => (int) $items->sum('cantidad'),
             ],
         ]);
     }
@@ -54,14 +109,15 @@ class CarritoController extends Controller
             'cantidad' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $cantidad = $data['cantidad'] ?? 1;
+        $cantidad = max(1, (int) ($data['cantidad'] ?? 1));
 
         $producto = Producto::query()
+            ->with(['imagenes:id,producto_id,ruta,orden'])
             ->where('activo', true)
             ->where('visible', true)
             ->findOrFail($data['producto_id']);
 
-        if ($producto->stock < $cantidad) {
+        if ((int) $producto->stock < $cantidad) {
             return back()->with('error', 'No hay stock suficiente para '.$producto->nombre.'.');
         }
 
@@ -69,35 +125,33 @@ class CarritoController extends Controller
         $key = (string) $producto->id;
 
         if (isset($carrito[$key])) {
-            $nuevaCantidad = $carrito[$key]['cantidad'] + $cantidad;
+            $nuevaCantidad = ((int) $carrito[$key]['cantidad']) + $cantidad;
 
-            if ($nuevaCantidad > $producto->stock) {
+            if ($nuevaCantidad > (int) $producto->stock) {
                 return back()->with('error', 'La cantidad solicitada excede el stock disponible.');
             }
 
-            $carrito[$key]['cantidad'] = $nuevaCantidad;
-            $carrito[$key]['stock'] = (int) $producto->stock;
-            $carrito[$key]['precio'] = (float) $producto->precio;
-            $carrito[$key]['precio_comparacion'] = $producto->precio_comparacion !== null
-                ? (float) $producto->precio_comparacion
-                : null;
-            $carrito[$key]['subtotal'] = round($nuevaCantidad * $carrito[$key]['precio'], 2);
+            $cantidadFinal = $nuevaCantidad;
         } else {
-            $carrito[$key] = [
-                'producto_id' => $producto->id,
-                'nombre' => $producto->nombre,
-                'slug' => $producto->slug,
-                'sku' => $producto->sku,
-                'imagen' => $producto->imagen_principal,
-                'precio' => (float) $producto->precio,
-                'precio_comparacion' => $producto->precio_comparacion !== null
-                    ? (float) $producto->precio_comparacion
-                    : null,
-                'cantidad' => $cantidad,
-                'stock' => (int) $producto->stock,
-                'subtotal' => round($producto->precio * $cantidad, 2),
-            ];
+            $cantidadFinal = $cantidad;
         }
+
+        $precio = (float) $producto->precio;
+
+        $carrito[$key] = [
+            'producto_id' => $producto->id,
+            'nombre' => $producto->nombre,
+            'slug' => $producto->slug,
+            'sku' => $producto->sku,
+            'imagen' => $this->resolveProductoImage($producto),
+            'precio' => round($precio, 2),
+            'precio_comparacion' => $producto->precio_comparacion !== null
+                ? round((float) $producto->precio_comparacion, 2)
+                : null,
+            'cantidad' => $cantidadFinal,
+            'stock' => (int) $producto->stock,
+            'subtotal' => round($precio * $cantidadFinal, 2),
+        ];
 
         session()->put('carrito', $carrito);
 
@@ -110,6 +164,8 @@ class CarritoController extends Controller
             'cantidad' => ['required', 'integer', 'min:1'],
         ]);
 
+        $producto->load(['imagenes:id,producto_id,ruta,orden']);
+
         $carrito = session()->get('carrito', []);
         $key = (string) $producto->id;
 
@@ -117,21 +173,32 @@ class CarritoController extends Controller
             return back()->with('error', 'El producto no está en el carrito.');
         }
 
-        if ($data['cantidad'] > $producto->stock) {
+        $cantidad = (int) $data['cantidad'];
+
+        if ($cantidad > (int) $producto->stock) {
             return back()->with('error', 'La cantidad solicitada excede el stock disponible.');
         }
 
-        $carrito[$key]['cantidad'] = (int) $data['cantidad'];
-        $carrito[$key]['stock'] = (int) $producto->stock;
-        $carrito[$key]['precio'] = (float) $producto->precio;
-        $carrito[$key]['precio_comparacion'] = $producto->precio_comparacion !== null
-            ? (float) $producto->precio_comparacion
-            : null;
-        $carrito[$key]['subtotal'] = round($carrito[$key]['precio'] * $data['cantidad'], 2);
+        $precio = (float) $producto->precio;
+
+        $carrito[$key] = [
+            'producto_id' => $producto->id,
+            'nombre' => $producto->nombre,
+            'slug' => $producto->slug,
+            'sku' => $producto->sku,
+            'imagen' => $this->resolveProductoImage($producto),
+            'precio' => round($precio, 2),
+            'precio_comparacion' => $producto->precio_comparacion !== null
+                ? round((float) $producto->precio_comparacion, 2)
+                : null,
+            'cantidad' => $cantidad,
+            'stock' => (int) $producto->stock,
+            'subtotal' => round($precio * $cantidad, 2),
+        ];
 
         session()->put('carrito', $carrito);
 
-        return back()->with('success', 'Actualizamos la cantidad de '.$producto->nombre.'.');
+        return back()->with('success', 'Se actualizó la cantidad de '.$producto->nombre.'.');
     }
 
     public function eliminar(Producto $producto): RedirectResponse
@@ -140,7 +207,7 @@ class CarritoController extends Controller
         unset($carrito[(string) $producto->id]);
         session()->put('carrito', $carrito);
 
-        return back()->with('success', $producto->nombre.' fue eliminado del carrito.');
+        return back()->with('success', $producto->nombre.' se quitó del carrito.');
     }
 
     public function vaciar(): RedirectResponse
@@ -150,14 +217,56 @@ class CarritoController extends Controller
         return back()->with('success', 'Tu carrito se vació correctamente.');
     }
 
+    private function syncSessionFromItems(Collection $items): void
+    {
+        $carrito = $items
+            ->mapWithKeys(fn (array $item) => [
+                (string) $item['producto_id'] => $item,
+            ])
+            ->all();
+
+        session()->put('carrito', $carrito);
+    }
+
+    private function resolveProductoImage(Producto $producto): ?string
+    {
+        $primeraImagen = $producto->imagenes
+            ->sortBy([
+                ['orden', 'asc'],
+                ['id', 'asc'],
+            ])
+            ->pluck('ruta')
+            ->filter()
+            ->first();
+
+        return $this->resolveImageUrl($primeraImagen ?: $producto->imagen_principal);
+    }
+
     private function resolveImageUrl(?string $path): ?string
     {
         if (! $path) {
             return null;
         }
 
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/storage/')) {
+        $path = trim($path);
+
+        if ($path === '') {
+            return null;
+        }
+
+        if (
+            str_starts_with($path, 'http://') ||
+            str_starts_with($path, 'https://')
+        ) {
             return $path;
+        }
+
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, 'storage/')) {
+            return '/'.$path;
         }
 
         return Storage::url($path);

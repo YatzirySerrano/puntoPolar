@@ -22,12 +22,20 @@ class TiendaController extends Controller
                 'nombre',
                 'slug',
                 'imagen',
-            ]);
+            ])
+            ->map(fn (Categoria $categoria) => [
+                'id' => $categoria->id,
+                'nombre' => $categoria->nombre,
+                'slug' => $categoria->slug,
+                'imagen' => $this->resolveImageUrl($categoria->imagen),
+            ])
+            ->values();
 
         $destacados = Producto::query()
             ->with([
                 'categoria:id,nombre,slug',
                 'marca:id,nombre,slug',
+                'imagenes:id,producto_id,ruta,orden',
             ])
             ->where('activo', true)
             ->where('visible', true)
@@ -48,12 +56,15 @@ class TiendaController extends Controller
                 'stock',
                 'imagen_principal',
                 'destacado',
-            ]);
+            ])
+            ->map(fn (Producto $producto) => $this->mapProductoPublico($producto))
+            ->values();
 
         $productos = Producto::query()
             ->with([
                 'categoria:id,nombre,slug',
                 'marca:id,nombre,slug',
+                'imagenes:id,producto_id,ruta,orden',
             ])
             ->where('activo', true)
             ->where('visible', true)
@@ -73,7 +84,9 @@ class TiendaController extends Controller
                 'stock',
                 'imagen_principal',
                 'destacado',
-            ]);
+            ])
+            ->map(fn (Producto $producto) => $this->mapProductoPublico($producto))
+            ->values();
 
         $banners = Banner::query()
             ->where('activo', true)
@@ -100,9 +113,7 @@ class TiendaController extends Controller
                     'id' => $banner->id,
                     'titulo' => $banner->titulo,
                     'descripcion' => $banner->descripcion,
-                    'imagen' => $banner->imagen
-                        ? Storage::url($banner->imagen)
-                        : null,
+                    'imagen' => $this->resolveImageUrl($banner->imagen),
                     'url' => $banner->url,
                     'orden' => $banner->orden,
                 ];
@@ -126,12 +137,14 @@ class TiendaController extends Controller
         $producto->load([
             'categoria:id,nombre,slug',
             'marca:id,nombre,slug',
+            'imagenes:id,producto_id,ruta,orden',
         ]);
 
         $relacionados = Producto::query()
             ->with([
                 'categoria:id,nombre,slug',
                 'marca:id,nombre,slug',
+                'imagenes:id,producto_id,ruta,orden',
             ])
             ->where('activo', true)
             ->where('visible', true)
@@ -152,11 +165,73 @@ class TiendaController extends Controller
                 'stock',
                 'imagen_principal',
                 'destacado',
-            ]);
+            ])
+            ->map(fn (Producto $item) => $this->mapProductoPublico($item))
+            ->values();
 
         return Inertia::render('Tienda/Show', [
-            'producto' => $producto,
+            'producto' => $this->mapProductoPublico($producto),
             'relacionados' => $relacionados,
         ]);
+    }
+
+    private function mapProductoPublico(Producto $producto): array
+    {
+        $imagenes = $producto->imagenes
+            ->sortBy([
+                ['orden', 'asc'],
+                ['id', 'asc'],
+            ])
+            ->values();
+
+        $primeraImagen = $imagenes->first()?->ruta;
+
+        return [
+            'id' => $producto->id,
+            'categoria_id' => $producto->categoria_id,
+            'marca_id' => $producto->marca_id,
+            'sku' => $producto->sku,
+            'nombre' => $producto->nombre,
+            'slug' => $producto->slug,
+            'descripcion' => $producto->descripcion,
+            'precio' => (float) $producto->precio,
+            'precio_comparacion' => $producto->precio_comparacion !== null
+                ? (float) $producto->precio_comparacion
+                : null,
+            'stock' => (int) $producto->stock,
+            'destacado' => (bool) $producto->destacado,
+            'imagen_principal' => $this->resolveImageUrl($primeraImagen ?: $producto->imagen_principal),
+            'categoria' => $producto->categoria
+                ? [
+                    'id' => $producto->categoria->id,
+                    'nombre' => $producto->categoria->nombre,
+                    'slug' => $producto->categoria->slug,
+                ]
+                : null,
+            'marca' => $producto->marca
+                ? [
+                    'id' => $producto->marca->id,
+                    'nombre' => $producto->marca->nombre,
+                    'slug' => $producto->marca->slug,
+                ]
+                : null,
+        ];
+    }
+
+    private function resolveImageUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (
+            str_starts_with($path, 'http://') ||
+            str_starts_with($path, 'https://') ||
+            str_starts_with($path, '/storage/')
+        ) {
+            return $path;
+        }
+
+        return Storage::url($path);
     }
 }
