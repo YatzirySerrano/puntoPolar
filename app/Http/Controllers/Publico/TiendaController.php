@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Publico;
 
 use App\Http\Controllers\Controller;
+use App\Models\Banner;
 use App\Models\Categoria;
 use App\Models\Producto;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -23,7 +25,10 @@ class TiendaController extends Controller
             ]);
 
         $destacados = Producto::query()
-            ->with(['categoria:id,nombre,slug', 'marca:id,nombre,slug'])
+            ->with([
+                'categoria:id,nombre,slug',
+                'marca:id,nombre,slug',
+            ])
             ->where('activo', true)
             ->where('visible', true)
             ->where('stock', '>', 0)
@@ -46,7 +51,10 @@ class TiendaController extends Controller
             ]);
 
         $productos = Producto::query()
-            ->with(['categoria:id,nombre,slug', 'marca:id,nombre,slug'])
+            ->with([
+                'categoria:id,nombre,slug',
+                'marca:id,nombre,slug',
+            ])
             ->where('activo', true)
             ->where('visible', true)
             ->where('stock', '>', 0)
@@ -67,18 +75,48 @@ class TiendaController extends Controller
                 'destacado',
             ]);
 
+        $banners = Banner::query()
+            ->where('activo', true)
+            ->where(function ($query) {
+                $query->whereNull('inicia_en')
+                    ->orWhere('inicia_en', '<=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('termina_en')
+                    ->orWhere('termina_en', '>=', now());
+            })
+            ->orderBy('orden')
+            ->orderBy('id')
+            ->get([
+                'id',
+                'titulo',
+                'descripcion',
+                'imagen',
+                'url',
+                'orden',
+            ])
+            ->map(function (Banner $banner) {
+                return [
+                    'id' => $banner->id,
+                    'titulo' => $banner->titulo,
+                    'descripcion' => $banner->descripcion,
+                    'imagen' => $banner->imagen
+                        ? Storage::url($banner->imagen)
+                        : null,
+                    'url' => $banner->url,
+                    'orden' => $banner->orden,
+                ];
+            })
+            ->values();
+
         return Inertia::render('Tienda/Index', [
             'categorias' => $categorias,
             'destacados' => $destacados,
             'productos' => $productos,
+            'banners' => $banners,
             'filtros' => [
                 'buscar' => request('buscar'),
                 'categoria' => request('categoria'),
-            ],
-            'bannerPrincipal' => [
-                'titulo' => 'La excelencia del titanio en tu cocina',
-                'subtitulo' => 'Durabilidad y precisión en cada preparación.',
-                'boton' => 'Saber más',
             ],
         ]);
     }
@@ -91,6 +129,10 @@ class TiendaController extends Controller
         ]);
 
         $relacionados = Producto::query()
+            ->with([
+                'categoria:id,nombre,slug',
+                'marca:id,nombre,slug',
+            ])
             ->where('activo', true)
             ->where('visible', true)
             ->where('stock', '>', 0)

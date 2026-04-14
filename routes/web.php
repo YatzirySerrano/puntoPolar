@@ -122,6 +122,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('banners.update');
             Route::delete('/banners/{banner}', [AdminBannerController::class, 'destroy'])
                 ->name('banners.destroy');
+            Route::post('/banners/reorder', [AdminBannerController::class, 'reorder'])
+                ->name('banners.reorder');
 
             Route::get('/metodos-pago', [AdminMetodoPagoController::class, 'index'])
                 ->name('metodos-pago.index');

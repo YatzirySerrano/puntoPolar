@@ -21,8 +21,6 @@ const userRole =
     (page.props.auth?.user?.rol as string | undefined) ?? 'cliente';
 
 const mainNavItems: NavItem[] = useRoleNavigation(userRole);
-
-const mainNavItems: NavItem[] = useRoleNavigation(userRole);
 </script>
 
 <template>
