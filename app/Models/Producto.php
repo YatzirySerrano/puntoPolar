@@ -5,8 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Producto extends Model
-{
+class Producto extends Model {
+
     protected $table = 'productos';
 
     protected $fillable = [
@@ -43,13 +43,16 @@ class Producto extends Model
         'publicado_en' => 'datetime',
     ];
 
-    public function categoria(): BelongsTo
-    {
-        return $this->belongsTo(Categoria::class);
+    public function categoria() {
+        return $this->belongsTo(Categoria::class, 'categoria_id');
     }
 
-    public function marca(): BelongsTo
-    {
-        return $this->belongsTo(Marca::class);
+    public function marca(): BelongsTo {
+        return $this->belongsTo(Marca::class, 'marca_id');
     }
+
+    public function imagenes() {
+        return $this->hasMany(ProductoImagen::class, 'producto_id');
+    }
+
 }
