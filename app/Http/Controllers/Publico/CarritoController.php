@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -13,21 +14,35 @@ class CarritoController extends Controller
 {
     public function index(): Response
     {
-        $carrito = session()->get('carrito', []);
+        $carrito = collect(session()->get('carrito', []))
+            ->map(function (array $item) {
+                $item['imagen'] = $this->resolveImageUrl($item['imagen'] ?? null);
+                $item['precio'] = round((float) ($item['precio'] ?? 0), 2);
+                $item['precio_comparacion'] = isset($item['precio_comparacion'])
+                    ? round((float) $item['precio_comparacion'], 2)
+                    : null;
+                $item['subtotal'] = round((float) ($item['subtotal'] ?? 0), 2);
+                $item['cantidad'] = (int) ($item['cantidad'] ?? 0);
+                $item['stock'] = (int) ($item['stock'] ?? 0);
 
-        $items = collect($carrito)->values();
-        $subtotal = $items->sum('subtotal');
+                return $item;
+            })
+            ->values();
+
+        $subtotal = $carrito->sum('subtotal');
         $envio = 0;
         $descuento = 0;
         $total = $subtotal + $envio - $descuento;
+        $totalProductos = $carrito->sum('cantidad');
 
         return Inertia::render('Tienda/Carrito', [
-            'items' => $items,
+            'items' => $carrito,
             'resumen' => [
                 'subtotal' => round($subtotal, 2),
                 'envio' => round($envio, 2),
                 'descuento' => round($descuento, 2),
                 'total' => round($total, 2),
+                'total_productos' => (int) $totalProductos,
             ],
         ]);
     }
@@ -61,6 +76,11 @@ class CarritoController extends Controller
             }
 
             $carrito[$key]['cantidad'] = $nuevaCantidad;
+            $carrito[$key]['stock'] = (int) $producto->stock;
+            $carrito[$key]['precio'] = (float) $producto->precio;
+            $carrito[$key]['precio_comparacion'] = $producto->precio_comparacion !== null
+                ? (float) $producto->precio_comparacion
+                : null;
             $carrito[$key]['subtotal'] = round($nuevaCantidad * $carrito[$key]['precio'], 2);
         } else {
             $carrito[$key] = [
@@ -70,6 +90,9 @@ class CarritoController extends Controller
                 'sku' => $producto->sku,
                 'imagen' => $producto->imagen_principal,
                 'precio' => (float) $producto->precio,
+                'precio_comparacion' => $producto->precio_comparacion !== null
+                    ? (float) $producto->precio_comparacion
+                    : null,
                 'cantidad' => $cantidad,
                 'stock' => (int) $producto->stock,
                 'subtotal' => round($producto->precio * $cantidad, 2),
@@ -98,7 +121,12 @@ class CarritoController extends Controller
             return back()->with('error', 'La cantidad solicitada excede el stock disponible.');
         }
 
-        $carrito[$key]['cantidad'] = $data['cantidad'];
+        $carrito[$key]['cantidad'] = (int) $data['cantidad'];
+        $carrito[$key]['stock'] = (int) $producto->stock;
+        $carrito[$key]['precio'] = (float) $producto->precio;
+        $carrito[$key]['precio_comparacion'] = $producto->precio_comparacion !== null
+            ? (float) $producto->precio_comparacion
+            : null;
         $carrito[$key]['subtotal'] = round($carrito[$key]['precio'] * $data['cantidad'], 2);
 
         session()->put('carrito', $carrito);
@@ -120,5 +148,18 @@ class CarritoController extends Controller
         session()->forget('carrito');
 
         return back()->with('success', 'Tu carrito se vació correctamente.');
+    }
+
+    private function resolveImageUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        return Storage::url($path);
     }
 }

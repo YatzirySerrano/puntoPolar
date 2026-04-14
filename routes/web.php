@@ -94,6 +94,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/usuarios', [AdminUsuarioController::class, 'index'])
                 ->name('usuarios.index');
+            Route::post('/usuarios', [AdminUsuarioController::class, 'store'])
+                ->name('usuarios.store');
             Route::get('/usuarios/{user}', [AdminUsuarioController::class, 'show'])
                 ->name('usuarios.show');
             Route::put('/usuarios/{user}', [AdminUsuarioController::class, 'update'])
@@ -145,8 +147,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('/configuraciones', [AdminConfiguracionController::class, 'index'])
                 ->name('configuraciones.index');
+            Route::post('/configuraciones', [AdminConfiguracionController::class, 'store'])
+                ->name('configuraciones.store');
             Route::put('/configuraciones/{configuracion}', [AdminConfiguracionController::class, 'update'])
                 ->name('configuraciones.update');
+            Route::delete('/configuraciones/{configuracion}', [AdminConfiguracionController::class, 'destroy'])
+                ->name('configuraciones.destroy');
+
         });
 });
 
