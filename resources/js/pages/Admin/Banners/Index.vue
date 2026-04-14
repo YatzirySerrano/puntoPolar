@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import Swal from 'sweetalert2'
+import { index as bannersIndex } from '@/routes/admin/banners'
 
 defineOptions({
     inheritAttrs: false,
+    layout: {
+        breadcrumbs: [
+            {
+                title: 'Banners',
+                href: bannersIndex().url,
+            },
+        ],
+    },
 })
 
 interface BannerRow {
@@ -119,6 +128,7 @@ function resetForm() {
 
     form.reset()
     form.clearErrors()
+    form.transform((data) => data)
 
     form.titulo = ''
     form.descripcion = ''
@@ -147,11 +157,26 @@ function openEdit(row: BannerRow) {
     showForm.value = true
 }
 
-function closeForm() {
-    if (form.processing) return
+function closeForm(force = false) {
+    if (form.processing && !force) return
     showForm.value = false
     resetForm()
 }
+
+function onEscape(event: KeyboardEvent) {
+    if (event.key === 'Escape' && showForm.value && !form.processing) {
+        closeForm()
+    }
+}
+
+onMounted(() => {
+    window.addEventListener('keydown', onEscape)
+})
+
+onBeforeUnmount(() => {
+    revokePreview()
+    window.removeEventListener('keydown', onEscape)
+})
 
 function onImageChange(event: Event) {
     const input = event.target as HTMLInputElement
@@ -189,12 +214,12 @@ function successAlert(title: string, text: string) {
         icon: 'success',
         title,
         text,
-        timer: 1500,
+        timer: 1400,
         showConfirmButton: false,
         background: '#ffffff',
         color: '#111827',
         customClass: {
-            popup: 'rounded-[22px] shadow-xl',
+            popup: 'rounded-[20px] shadow-xl',
         },
     })
 }
@@ -209,10 +234,28 @@ function errorAlert(title: string, text: string) {
         color: '#111827',
         confirmButtonColor: '#11142C',
         customClass: {
-            popup: 'rounded-[22px] shadow-xl',
+            popup: 'rounded-[20px] shadow-xl',
             confirmButton: 'rounded-xl font-semibold',
         },
     })
+}
+
+function validateBeforeSubmit() {
+    form.clearErrors()
+
+    if (!form.titulo.trim()) {
+        form.setError('titulo', 'El título es obligatorio.')
+    }
+
+    if (!isEditing.value && !form.imagen_file) {
+        form.setError('imagen_file', 'Debes seleccionar una imagen para el banner.')
+    }
+
+    if (isEditing.value && form.remove_image && !form.imagen_file) {
+        form.setError('imagen_file', 'Debes seleccionar una imagen para reemplazar la actual.')
+    }
+
+    return Object.keys(form.errors).length === 0
 }
 
 function submit() {
@@ -220,27 +263,16 @@ function submit() {
     const id = editingId.value
 
     if (wasEditing && !id) return
+    if (!validateBeforeSubmit()) return
 
-    const options = {
+    const commonOptions = {
         preserveScroll: true,
         forceFormData: true,
-        onSuccess: () => {
-            closeForm()
-
-            setTimeout(() => {
-                successAlert(
-                    wasEditing ? 'Banner actualizado' : 'Banner creado',
-                    wasEditing
-                        ? 'El banner se actualizó correctamente.'
-                        : 'El banner se registró correctamente.'
-                )
-            }, 120)
-        },
         onError: () => {
-            errorAlert(
-                'No se pudo guardar',
-                'Revisa la información del formulario.'
-            )
+            errorAlert('No se pudo guardar', 'Revisa la información del formulario.')
+        },
+        onFinish: () => {
+            form.transform((data) => data)
         },
     }
 
@@ -250,12 +282,25 @@ function submit() {
                 ...data,
                 _method: 'put',
             }))
-            .post(updateUrl(id), options)
+            .post(updateUrl(id), {
+                ...commonOptions,
+                onSuccess: () => {
+                    closeForm(true)
+                    requestAnimationFrame(() => {
+                        successAlert('Banner actualizado', 'El banner se actualizó correctamente.')
+                    })
+                },
+            })
 
         return
     }
 
-    form.post(storeUrl(), options)
+    form.post(storeUrl(), {
+        ...commonOptions,
+        onSuccess: () => {
+            closeForm(true)
+        },
+    })
 }
 
 async function destroyRow(row: BannerRow) {
@@ -272,7 +317,7 @@ async function destroyRow(row: BannerRow) {
         confirmButtonColor: '#dc2626',
         cancelButtonColor: '#11142C',
         customClass: {
-            popup: 'rounded-[22px] shadow-xl',
+            popup: 'rounded-[20px] shadow-xl',
             confirmButton: 'rounded-xl font-semibold',
             cancelButton: 'rounded-xl font-semibold',
         },
@@ -337,10 +382,6 @@ function onDrop(index: number) {
         },
     })
 }
-
-onBeforeUnmount(() => {
-    revokePreview()
-})
 </script>
 
 <template>
@@ -447,214 +488,226 @@ onBeforeUnmount(() => {
             </section>
 
             <Transition
-                enter-active-class="transition duration-200 ease-out"
+                enter-active-class="transition duration-300 ease-out"
                 enter-from-class="opacity-0"
                 enter-to-class="opacity-100"
-                leave-active-class="transition duration-150 ease-in"
+                leave-active-class="transition duration-200 ease-in"
                 leave-from-class="opacity-100"
                 leave-to-class="opacity-0"
             >
                 <div
                     v-if="showForm"
-                    class="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
-                    @click.self="closeForm"
+                    class="fixed inset-0 z-50 bg-black/45"
                 >
-                    <Transition
-                        appear
-                        enter-active-class="transition duration-200 ease-out"
-                        enter-from-class="opacity-0 translate-y-2 sm:translate-y-0 sm:scale-[0.99]"
-                        enter-to-class="opacity-100 translate-y-0 sm:scale-100"
-                        leave-active-class="transition duration-150 ease-in"
-                        leave-from-class="opacity-100 translate-y-0 sm:scale-100"
-                        leave-to-class="opacity-0 translate-y-2 sm:translate-y-0 sm:scale-[0.99]"
-                    >
-                        <div
-                            v-if="showForm"
-                            class="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[26px] bg-white shadow-2xl sm:max-w-3xl sm:rounded-[26px]"
+                    <div class="flex h-dvh items-end justify-center sm:items-center sm:p-4">
+                        <Transition
+                            appear
+                            enter-active-class="transition duration-300 ease-out"
+                            enter-from-class="translate-y-4 opacity-0 sm:translate-y-0 sm:scale-[0.985]"
+                            enter-to-class="translate-y-0 opacity-100 sm:scale-100"
+                            leave-active-class="transition duration-200 ease-in"
+                            leave-from-class="translate-y-0 opacity-100 sm:scale-100"
+                            leave-to-class="translate-y-2 opacity-0 sm:translate-y-0 sm:scale-[0.99]"
                         >
-                            <div class="flex items-start justify-between gap-4 border-b border-neutral-200 px-5 py-5">
-                                <div class="min-w-0">
-                                    <div class="mb-2 inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">
-                                        {{ isEditing ? 'Actualizar' : 'Crear' }}
-                                    </div>
-
-                                    <h3 class="text-lg font-black tracking-tight text-neutral-900 sm:text-xl md:text-2xl">
-                                        {{ isEditing ? 'Editar banner' : 'Nuevo banner' }}
-                                    </h3>
-
-                                    <p class="mt-1 text-sm leading-6 text-neutral-500">
-                                        Carga la imagen del banner y completa su información.
-                                    </p>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-lg text-neutral-500 transition-colors duration-200 hover:bg-neutral-50 hover:text-neutral-800"
-                                    @click="closeForm"
-                                >
-                                    ×
-                                </button>
-                            </div>
-
-                            <div class="overflow-y-auto px-5 py-5">
-                                <form class="space-y-5" @submit.prevent="submit">
-                                    <div>
-                                        <label class="mb-2 block text-sm font-bold text-neutral-700">
-                                            Título
-                                        </label>
-                                        <input
-                                            v-model="form.titulo"
-                                            type="text"
-                                            placeholder="Ej. Promoción de temporada"
-                                            class="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm transition-colors duration-200 placeholder:text-neutral-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 focus:outline-none"
-                                        />
-                                        <p v-if="form.errors.titulo" class="mt-2 text-sm font-medium text-red-600">
-                                            {{ form.errors.titulo }}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <label class="mb-2 block text-sm font-bold text-neutral-700">
-                                            Descripción
-                                        </label>
-                                        <textarea
-                                            v-model="form.descripcion"
-                                            rows="3"
-                                            placeholder="Agrega una breve descripción para el banner"
-                                            class="w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm transition-colors duration-200 placeholder:text-neutral-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 focus:outline-none"
-                                        />
-                                        <p v-if="form.errors.descripcion" class="mt-2 text-sm font-medium text-red-600">
-                                            {{ form.errors.descripcion }}
-                                        </p>
-                                    </div>
-
-                                    <div class="rounded-[24px] border border-neutral-200 bg-white p-4 shadow-sm">
-                                        <div class="mb-3 flex items-center justify-between gap-3">
-                                            <p class="text-sm font-bold text-neutral-800">
-                                                Vista previa
-                                            </p>
-                                            <span class="rounded-full bg-neutral-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
-                                                Banner
-                                            </span>
+                            <div
+                                v-if="showForm"
+                                class="flex h-[92dvh] w-full flex-col overflow-hidden rounded-t-[26px] bg-white shadow-2xl sm:h-auto sm:max-h-[88vh] sm:max-w-6xl sm:rounded-[26px]"
+                            >
+                                <div class="flex items-start justify-between gap-4 border-b border-neutral-200 px-5 py-5 sm:px-6">
+                                    <div class="min-w-0">
+                                        <div class="mb-2 inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">
+                                            {{ isEditing ? 'Actualizar' : 'Crear' }}
                                         </div>
 
-                                        <div class="relative overflow-hidden rounded-[20px] border border-dashed border-neutral-300 bg-neutral-50">
-                                            <div class="aspect-[16/9]">
-                                                <img
-                                                    v-if="displayPreview"
-                                                    :src="displayPreview"
-                                                    alt="Vista previa del banner"
-                                                    class="h-full w-full object-cover"
-                                                />
+                                        <h3 class="text-lg font-black tracking-tight text-neutral-900 sm:text-xl md:text-2xl">
+                                            {{ isEditing ? 'Editar banner' : 'Nuevo banner' }}
+                                        </h3>
 
-                                                <div
-                                                    v-else
-                                                    class="flex h-full flex-col items-center justify-center px-5 text-center"
-                                                >
-                                                    <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl shadow-sm">
-                                                        🖼️
-                                                    </div>
-                                                    <p class="text-sm font-semibold text-neutral-600">
-                                                        Aquí se mostrará la imagen
+                                        <p class="mt-1 text-sm leading-6 text-neutral-500">
+                                            Carga la imagen del banner y completa su información.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-neutral-200 bg-white text-lg text-neutral-500 transition-colors duration-200 hover:bg-neutral-50 hover:text-neutral-800"
+                                        @click="closeForm"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+
+                                <div class="min-h-0 flex-1 overflow-y-auto">
+                                    <form
+                                        class="grid min-h-full gap-0 lg:grid-cols-[1.05fr_0.95fr]"
+                                        @submit.prevent="submit"
+                                    >
+                                        <div class="order-2 space-y-5 p-5 sm:p-6 lg:order-1">
+                                            <div>
+                                                <label class="mb-2 block text-sm font-bold text-neutral-700">
+                                                    Título
+                                                </label>
+                                                <input
+                                                    v-model="form.titulo"
+                                                    type="text"
+                                                    placeholder="Ej. Promoción de temporada"
+                                                    class="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm transition-colors duration-200 placeholder:text-neutral-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 focus:outline-none"
+                                                />
+                                                <p v-if="form.errors.titulo" class="mt-2 text-sm font-medium text-red-600">
+                                                    {{ form.errors.titulo }}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <label class="mb-2 block text-sm font-bold text-neutral-700">
+                                                    Descripción
+                                                </label>
+                                                <textarea
+                                                    v-model="form.descripcion"
+                                                    rows="5"
+                                                    placeholder="Agrega una breve descripción para el banner"
+                                                    class="w-full resize-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm transition-colors duration-200 placeholder:text-neutral-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100 focus:outline-none"
+                                                />
+                                                <p v-if="form.errors.descripcion" class="mt-2 text-sm font-medium text-red-600">
+                                                    {{ form.errors.descripcion }}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <label class="flex w-full items-center justify-between rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-sm transition-colors duration-200 hover:border-sky-200 hover:bg-sky-50/60">
+                                                    <span class="text-sm font-bold text-neutral-700">
+                                                        Activo
+                                                    </span>
+
+                                                    <input
+                                                        v-model="form.activo"
+                                                        type="checkbox"
+                                                        class="h-5 w-5 rounded border-neutral-300 text-sky-700 focus:ring-sky-300"
+                                                    />
+                                                </label>
+                                            </div>
+
+                                            <div class="rounded-[24px] border border-neutral-200 bg-neutral-50 p-4">
+                                                <p class="text-sm font-bold text-neutral-800">
+                                                    Resumen
+                                                </p>
+
+                                                <div class="mt-4 rounded-[20px] border border-neutral-200 bg-white p-4">
+                                                    <p class="line-clamp-2 text-sm font-black text-neutral-900">
+                                                        {{ form.titulo || 'Título del banner' }}
                                                     </p>
-                                                    <p class="mt-1 text-xs text-neutral-400">
-                                                        Selecciona una imagen
+                                                    <p v-if="form.descripcion" class="mt-2 line-clamp-4 text-sm text-neutral-500">
+                                                        {{ form.descripcion }}
+                                                    </p>
+                                                    <p class="mt-2 text-xs text-neutral-500">
+                                                        {{ form.activo ? 'Visible en la tienda' : 'Oculto temporalmente' }}
                                                     </p>
                                                 </div>
                                             </div>
-
-                                            <button
-                                                v-if="hasImagePreview"
-                                                type="button"
-                                                class="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-base font-bold text-neutral-700 shadow-md transition-colors duration-200 hover:bg-red-50 hover:text-red-600"
-                                                @click="removeImage"
-                                            >
-                                                ×
-                                            </button>
                                         </div>
 
-                                        <div class="mt-4">
-                                            <label class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-[#11142C] px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--brand-green)] hover:text-[#11142C]">
-                                                Seleccionar imagen
-                                                <input
-                                                    ref="fileInput"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    class="hidden"
-                                                    @change="onImageChange"
-                                                />
-                                            </label>
+                                        <div class="order-1 border-b border-neutral-200 bg-neutral-50/70 p-5 sm:p-6 lg:order-2 lg:border-b-0 lg:border-l">
+                                            <div class="rounded-[24px] border border-neutral-200 bg-white p-4 shadow-sm">
+                                                <div class="mb-3 flex items-center justify-between gap-3">
+                                                    <p class="text-sm font-bold text-neutral-800">
+                                                        Vista previa
+                                                    </p>
+                                                    <span class="rounded-full bg-neutral-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-neutral-500">
+                                                        Banner
+                                                    </span>
+                                                </div>
 
-                                            <p class="mt-3 truncate text-sm font-medium text-neutral-700">
-                                                {{ selectedFileName || 'No has seleccionado ninguna imagen.' }}
-                                            </p>
-                                            <p class="mt-1 text-xs text-neutral-400">
-                                                Formatos permitidos: JPG, PNG, WEBP. Máximo 15 MB.
-                                            </p>
+                                                <div class="relative overflow-hidden rounded-[20px] border border-dashed border-neutral-300 bg-neutral-50">
+                                                    <div class="aspect-[16/9]">
+                                                        <img
+                                                            v-if="displayPreview"
+                                                            :src="displayPreview"
+                                                            alt="Vista previa del banner"
+                                                            class="h-full w-full object-cover"
+                                                        />
+
+                                                        <div
+                                                            v-else
+                                                            class="flex h-full flex-col items-center justify-center px-5 text-center"
+                                                        >
+                                                            <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-xl shadow-sm">
+                                                                🖼️
+                                                            </div>
+                                                            <p class="text-sm font-semibold text-neutral-600">
+                                                                Aquí se mostrará la imagen
+                                                            </p>
+                                                            <p class="mt-1 text-xs text-neutral-400">
+                                                                Selecciona una imagen
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        v-if="hasImagePreview"
+                                                        type="button"
+                                                        class="absolute right-3 top-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-base font-bold text-neutral-700 shadow-md transition-colors duration-200 hover:bg-red-50 hover:text-red-600"
+                                                        @click="removeImage"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </div>
+
+                                                <div class="mt-4">
+                                                    <label class="inline-flex cursor-pointer items-center justify-center rounded-2xl bg-[#11142C] px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--brand-green)] hover:text-[#11142C]">
+                                                        Seleccionar imagen
+                                                        <input
+                                                            ref="fileInput"
+                                                            type="file"
+                                                            accept="image/*"
+                                                            class="hidden"
+                                                            @change="onImageChange"
+                                                        />
+                                                    </label>
+
+                                                    <p class="mt-3 truncate text-sm font-medium text-neutral-700">
+                                                        {{ selectedFileName || 'No has seleccionado ninguna imagen.' }}
+                                                    </p>
+                                                    <p class="mt-1 text-xs text-neutral-400">
+                                                        Formatos permitidos: JPG, PNG, WEBP. Máximo 15 MB.
+                                                    </p>
+                                                </div>
+
+                                                <p v-if="form.errors.imagen_file" class="mt-2 text-sm font-medium text-red-600">
+                                                    {{ form.errors.imagen_file }}
+                                                </p>
+                                            </div>
                                         </div>
 
-                                        <p v-if="form.errors.imagen_file" class="mt-2 text-sm font-medium text-red-600">
-                                            {{ form.errors.imagen_file }}
-                                        </p>
-                                    </div>
+                                        <div class="order-3 lg:col-span-2">
+                                            <div class="sticky bottom-0 border-t border-neutral-200 bg-white/96 px-5 py-4 backdrop-blur sm:px-6">
+                                                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                                    <button
+                                                        type="button"
+                                                        class="inline-flex items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 shadow-sm transition-colors duration-200 hover:bg-neutral-50"
+                                                        @click="closeForm"
+                                                    >
+                                                        Cancelar
+                                                    </button>
 
-                                    <div>
-                                        <label class="flex w-full items-center justify-between rounded-2xl border border-neutral-200 bg-white px-4 py-3 shadow-sm transition-colors duration-200 hover:border-sky-200 hover:bg-sky-50/60">
-                                            <span class="text-sm font-bold text-neutral-700">
-                                                Activo
-                                            </span>
-
-                                            <input
-                                                v-model="form.activo"
-                                                type="checkbox"
-                                                class="h-5 w-5 rounded border-neutral-300 text-sky-700 focus:ring-sky-300"
-                                            />
-                                        </label>
-                                    </div>
-
-                                    <div class="rounded-[24px] border border-neutral-200 bg-neutral-50 p-4">
-                                        <p class="text-sm font-bold text-neutral-800">
-                                            Resumen
-                                        </p>
-
-                                        <div class="mt-4 rounded-[20px] border border-neutral-200 bg-white p-4">
-                                            <p class="line-clamp-2 text-sm font-black text-neutral-900">
-                                                {{ form.titulo || 'Título del banner' }}
-                                            </p>
-                                            <p v-if="form.descripcion" class="mt-2 line-clamp-3 text-sm text-neutral-500">
-                                                {{ form.descripcion }}
-                                            </p>
-                                            <p class="mt-2 text-xs text-neutral-500">
-                                                {{ form.activo ? 'Visible en la tienda' : 'Oculto temporalmente' }}
-                                            </p>
+                                                    <button
+                                                        type="submit"
+                                                        :disabled="form.processing"
+                                                        class="inline-flex items-center justify-center rounded-2xl bg-[#11142C] px-5 py-3 text-sm font-semibold text-white shadow-md transition-colors duration-200 hover:bg-[var(--brand-green)] hover:text-[#11142C] disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        {{ form.processing
+                                                            ? 'Guardando...'
+                                                            : isEditing
+                                                                ? 'Actualizar banner'
+                                                                : 'Registrar banner' }}
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-
-                                    <div class="flex flex-col-reverse gap-3 border-t border-neutral-200 pt-4 sm:flex-row sm:justify-end">
-                                        <button
-                                            type="button"
-                                            class="inline-flex items-center justify-center rounded-2xl border border-neutral-200 bg-white px-5 py-3 text-sm font-semibold text-neutral-700 shadow-sm transition-colors duration-200 hover:bg-neutral-50"
-                                            @click="closeForm"
-                                        >
-                                            Cancelar
-                                        </button>
-
-                                        <button
-                                            type="submit"
-                                            :disabled="form.processing"
-                                            class="inline-flex items-center justify-center rounded-2xl bg-[#11142C] px-5 py-3 text-sm font-semibold text-white shadow-md transition-colors duration-200 hover:bg-[var(--brand-green)] hover:text-[#11142C] disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            {{ form.processing
-                                                ? 'Guardando...'
-                                                : isEditing
-                                                    ? 'Actualizar banner'
-                                                    : 'Crear banner' }}
-                                        </button>
-                                    </div>
-                                </form>
+                                    </form>
+                                </div>
                             </div>
-                        </div>
-                    </Transition>
+                        </Transition>
+                    </div>
                 </div>
             </Transition>
         </div>
