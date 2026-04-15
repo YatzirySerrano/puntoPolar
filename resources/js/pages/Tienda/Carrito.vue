@@ -1,8 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import heroImg from '@/img/hero-tienda.jpeg'
+
+interface OfertaInfo {
+  id: number
+  nombre: string
+  tipo: string
+  valor: number
+}
 
 interface ItemCarrito {
   producto_id: number
@@ -11,10 +18,15 @@ interface ItemCarrito {
   sku: string
   imagen?: string | null
   precio: number
+  precio_original?: number | null
   precio_comparacion?: number | null
   cantidad: number
   stock: number
   subtotal: number
+  subtotal_original?: number
+  descuento_oferta?: number
+  tiene_oferta?: boolean
+  oferta?: OfertaInfo | null
 }
 
 const props = defineProps<{
@@ -23,18 +35,21 @@ const props = defineProps<{
     subtotal: number
     envio: number
     descuento: number
+    descuento_ofertas: number
+    descuento_cupon: number
     total: number
     total_productos?: number
   }
 }>()
 
 const totalItems = computed(() => props.resumen.total_productos || props.items.length)
+const couponCode = ref('')
 
 const formatearMoneda = (valor: number) => {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
-  }).format(valor)
+  }).format(Number(valor ?? 0))
 }
 
 const actualizarCantidad = (item: ItemCarrito, cantidad: number) => {
@@ -80,6 +95,17 @@ const vaciarCarrito = () => {
     preserveScroll: true,
     preserveState: true,
   })
+}
+
+const aplicarCupon = () => {
+  router.post(
+    '/carrito/cupon',
+    { codigo: couponCode.value },
+    {
+      preserveScroll: true,
+      preserveState: true,
+    },
+  )
 }
 </script>
 
@@ -171,6 +197,13 @@ const vaciarCarrito = () => {
                         </span>
 
                         <span
+                          v-if="item.tiene_oferta"
+                          class="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black tracking-[0.12em] text-emerald-700 uppercase"
+                        >
+                          Oferta activa
+                        </span>
+
+                        <span
                           v-if="item.stock <= 3"
                           class="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-black tracking-[0.12em] text-amber-700 uppercase"
                         >
@@ -196,12 +229,19 @@ const vaciarCarrito = () => {
                           </span>
 
                           <span
-                            v-if="item.precio_comparacion && item.precio_comparacion > item.precio"
+                            v-if="item.precio_original && item.precio_original > item.precio"
                             class="text-sm text-neutral-400 line-through"
                           >
-                            {{ formatearMoneda(item.precio_comparacion) }}
+                            {{ formatearMoneda(item.precio_original) }}
                           </span>
                         </div>
+
+                        <p
+                          v-if="item.tiene_oferta && item.oferta"
+                          class="mt-2 text-xs font-bold uppercase tracking-[0.18em] text-emerald-600"
+                        >
+                          {{ item.oferta.nombre }}
+                        </p>
 
                         <p class="mt-1 text-xs font-bold tracking-[0.18em] text-neutral-400 uppercase">
                           Precio por unidad
@@ -251,8 +291,23 @@ const vaciarCarrito = () => {
                             <p class="text-xs font-bold tracking-[0.18em] text-neutral-400 uppercase">
                               Subtotal
                             </p>
-                            <p class="mt-2 text-2xl font-black text-neutral-900 md:text-3xl">
+
+                            <p
+                              v-if="item.subtotal_original && item.subtotal_original > item.subtotal"
+                              class="mt-2 text-sm text-neutral-400 line-through"
+                            >
+                              {{ formatearMoneda(item.subtotal_original) }}
+                            </p>
+
+                            <p class="text-2xl font-black text-neutral-900 md:text-3xl">
                               {{ formatearMoneda(item.subtotal) }}
+                            </p>
+
+                            <p
+                              v-if="item.descuento_oferta && item.descuento_oferta > 0"
+                              class="mt-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-600"
+                            >
+                              Ahorras {{ formatearMoneda(item.descuento_oferta) }}
                             </p>
                           </div>
 
@@ -303,10 +358,11 @@ const vaciarCarrito = () => {
             </h3>
 
             <p class="mt-2 text-sm leading-6 text-neutral-500">
-              La interfaz queda lista para conectar cupones reales más adelante.
+              Aplica un cupón válido para mejorar el total de tu compra.
             </p>
 
             <input
+              v-model="couponCode"
               type="text"
               placeholder="Ingresa tu código"
               class="mt-4 h-12 w-full rounded-2xl border border-[#d5d5d5] bg-white px-4 text-sm text-neutral-900 outline-none transition-all duration-300 placeholder:text-neutral-400 focus:border-[#30beef] focus:ring-4 focus:ring-[#30beef]/10"
@@ -315,6 +371,7 @@ const vaciarCarrito = () => {
             <button
               type="button"
               class="mt-4 w-full rounded-full border border-[#30beef] px-4 py-3 font-black text-[#30beef] transition-all duration-300 hover:bg-[#30beef] hover:text-white hover:shadow-md"
+              @click="aplicarCupon"
             >
               Aplicar código
             </button>
@@ -340,6 +397,26 @@ const vaciarCarrito = () => {
                 </span>
               </div>
 
+              <div
+                v-if="(resumen.descuento_ofertas ?? 0) > 0"
+                class="flex items-center justify-between"
+              >
+                <span class="text-neutral-500">Descuento por ofertas</span>
+                <span class="font-bold text-emerald-600">
+                  -{{ formatearMoneda(resumen.descuento_ofertas) }}
+                </span>
+              </div>
+
+              <div
+                v-if="(resumen.descuento_cupon ?? 0) > 0"
+                class="flex items-center justify-between"
+              >
+                <span class="text-neutral-500">Cupón</span>
+                <span class="font-bold text-emerald-600">
+                  -{{ formatearMoneda(resumen.descuento_cupon) }}
+                </span>
+              </div>
+
               <div class="flex items-center justify-between">
                 <span class="text-neutral-500">Envío</span>
                 <span class="font-bold text-neutral-900">
@@ -348,9 +425,9 @@ const vaciarCarrito = () => {
               </div>
 
               <div class="flex items-center justify-between">
-                <span class="text-neutral-500">Descuento</span>
+                <span class="text-neutral-500">Descuento total</span>
                 <span class="font-bold text-neutral-900">
-                  {{ formatearMoneda(resumen.descuento) }}
+                  -{{ formatearMoneda(resumen.descuento) }}
                 </span>
               </div>
 

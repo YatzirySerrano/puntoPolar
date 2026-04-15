@@ -55,4 +55,13 @@ class Producto extends Model {
         return $this->hasMany(ProductoImagen::class, 'producto_id');
     }
 
+    public function ofertas() {
+        return $this->belongsToMany(
+            \App\Models\Oferta::class,
+            'oferta_producto',
+            'producto_id',
+            'oferta_id'
+        )->withTimestamps();
+    }
+
 }

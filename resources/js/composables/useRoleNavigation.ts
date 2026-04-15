@@ -11,6 +11,7 @@ import {
     CreditCard,
     Settings,
     Receipt,
+    BadgePercent,
 } from 'lucide-vue-next';
 import type { NavItem } from '@/types';
 
@@ -83,6 +84,11 @@ const adminItems: NavItem[] = [
         title: 'Cupones',
         href: '/admin/cupones',
         icon: TicketPercent,
+    },
+    {
+        title: 'Ofertas',
+        href: '/admin/ofertas',
+        icon: BadgePercent,
     },
     {
         title: 'Banners',

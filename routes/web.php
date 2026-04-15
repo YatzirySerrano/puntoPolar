@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\CategoriaController as AdminCategoriaController;
 use App\Http\Controllers\Admin\ConfiguracionController as AdminConfiguracionController;
 use App\Http\Controllers\Admin\CuponController as AdminCuponController;
 use App\Http\Controllers\Admin\MarcaController as AdminMarcaController;
+use App\Http\Controllers\Admin\OfertaController as AdminOfertaController;
 use App\Http\Controllers\Admin\MetodoPagoController as AdminMetodoPagoController;
 use App\Http\Controllers\Admin\PagoController as AdminPagoController;
 use App\Http\Controllers\Admin\PedidoController as AdminPedidoController;
@@ -19,6 +20,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [TiendaController::class, 'index'])->name('home');
 
 Route::get('/productos/{producto:slug}', [TiendaController::class, 'show'])->name('tienda.show');
+
+ Route::get('/productos', [TiendaController::class, 'catalogo'])->name('tienda.catalogo');
+
+ Route::get('/productos/{producto:slug}', [TiendaController::class, 'show'])->name('tienda.show');
 
 Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
 Route::post('/carrito/agregar', [CarritoController::class, 'agregar'])->name('carrito.agregar');
@@ -91,6 +96,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('pedidos.show');
             Route::patch('/pedidos/{pedido}/estatus', [AdminPedidoController::class, 'updateStatus'])
                 ->name('pedidos.estatus');
+
+            Route::get('/ofertas', [AdminOfertaController::class, 'index'])
+                ->name('ofertas.index');
+            Route::post('/ofertas', [AdminOfertaController::class, 'store'])
+                ->name('ofertas.store');
+            Route::get('/ofertas/{oferta}', [AdminOfertaController::class, 'show'])
+                ->name('ofertas.show');
+            Route::put('/ofertas/{oferta}', [AdminOfertaController::class, 'update'])
+                ->name('ofertas.update');
+            Route::delete('/ofertas/{oferta}', [AdminOfertaController::class, 'destroy'])
+                ->name('ofertas.destroy');
 
             Route::get('/usuarios', [AdminUsuarioController::class, 'index'])
                 ->name('usuarios.index');
