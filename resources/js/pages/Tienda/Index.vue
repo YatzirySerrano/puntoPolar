@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import heroImg from '@/img/hero-tienda.jpeg'
+import decoDots from '@/img/web-recurso-2.png'
 
 interface Categoria {
   id: number
@@ -51,22 +52,76 @@ interface Producto {
   } | null
 }
 
+interface Banner {
+  id: number
+  titulo: string
+  descripcion?: string | null
+  imagen: string | null
+  url?: string | null
+  orden?: number | null
+}
+
+interface HeroSlide {
+  id: number
+  image: string
+  badge: string
+  title: string
+  subtitle: string
+  cta: string
+  href: string
+}
+
 const props = defineProps<{
   categorias: Categoria[]
   destacados: Producto[]
   productos?: Producto[]
   marcas?: Marca[]
+  banners?: Banner[]
 }>()
 
+const currentSlide = ref(0)
 const animatingProductId = ref<number | null>(null)
 const toast = ref<{ show: boolean; text: string }>({
   show: false,
   text: '',
 })
 
+const slides = computed<HeroSlide[]>(() => {
+  const dbSlides = (props.banners ?? [])
+    .filter((banner) => !!banner.imagen)
+    .map((banner) => ({
+      id: banner.id,
+      image: banner.imagen as string,
+      badge: 'Promoción',
+      title: banner.titulo,
+      subtitle:
+        banner.descripcion ||
+        'Explora categorías, revisa productos destacados y entra al catálogo completo.',
+      cta: 'Ver productos',
+      href: '/productos',
+    }))
+
+  if (dbSlides.length > 0) return dbSlides
+
+  return [
+    {
+      id: 0,
+      image: heroImg,
+      badge: 'Catálogo',
+      title: 'Descubre productos con una experiencia más elegante',
+      subtitle:
+        'Un catálogo visual, rápido y claro para explorar categorías, comparar opciones y comprar mejor.',
+      cta: 'Ver productos',
+      href: '/productos',
+    },
+  ]
+})
+
 const categoriesWithCount = computed(() => {
+  const source = props.productos?.length ? props.productos : props.destacados ?? []
+
   return (props.categorias ?? []).map((categoria) => {
-    const count = (props.productos ?? []).filter((producto) => {
+    const count = source.filter((producto) => {
       const productCategoryId = producto.categoria?.id ?? producto.categoria_id ?? null
       return productCategoryId === categoria.id
     }).length
@@ -88,8 +143,12 @@ const featuredBrands = computed(() => {
   }
 
   const map = new Map<number, Marca>()
+  const source = [
+    ...(props.productos ?? []),
+    ...(props.destacados ?? []),
+  ]
 
-  for (const producto of props.productos ?? []) {
+  for (const producto of source) {
     if (producto.marca?.id && producto.marca?.nombre) {
       map.set(producto.marca.id, {
         id: producto.marca.id,
@@ -100,8 +159,52 @@ const featuredBrands = computed(() => {
     }
   }
 
-  return Array.from(map.values()).slice(0, 8)
+  return Array.from(map.values())
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+    .slice(0, 8)
 })
+
+let autoSlideTimer: number | null = null
+
+function startAutoSlide() {
+  stopAutoSlide()
+
+  if (slides.value.length <= 1) return
+
+  autoSlideTimer = window.setInterval(() => {
+    nextSlide()
+  }, 5000)
+}
+
+function stopAutoSlide() {
+  if (autoSlideTimer) {
+    window.clearInterval(autoSlideTimer)
+    autoSlideTimer = null
+  }
+}
+
+onMounted(() => {
+  startAutoSlide()
+})
+
+onBeforeUnmount(() => {
+  stopAutoSlide()
+})
+
+function goToSlide(index: number) {
+  currentSlide.value = index
+  startAutoSlide()
+}
+
+function nextSlide() {
+  if (!slides.value.length) return
+  currentSlide.value = (currentSlide.value + 1) % slides.value.length
+}
+
+function prevSlide() {
+  if (!slides.value.length) return
+  currentSlide.value = (currentSlide.value - 1 + slides.value.length) % slides.value.length
+}
 
 function formatPrice(value: number | string | null | undefined) {
   return new Intl.NumberFormat('es-MX', {
@@ -157,65 +260,93 @@ function addToCart(producto: Producto) {
     <Head title="Tienda" />
 
     <div class="bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)]">
-      <section class="px-4 pb-10 pt-8 md:px-8 md:pt-10">
+      <section class="relative overflow-hidden px-4 pb-12 pt-6 md:px-8 md:pt-8">
         <div class="mx-auto w-full max-w-[1500px]">
-          <div class="overflow-hidden rounded-[34px] border border-neutral-200 bg-white shadow-[0_24px_70px_rgba(17,20,44,0.06)]">
-            <div class="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-              <div class="p-6 md:p-8 xl:p-10">
-                <span class="inline-flex rounded-full bg-[var(--brand-blue)]/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[var(--brand-blue)]">
-                  Tienda Mr Lana
-                </span>
+          <div class="overflow-hidden rounded-[36px] border border-neutral-200 bg-white shadow-[0_28px_80px_rgba(17,20,44,0.10)]">
+            <div class="relative min-h-[440px] overflow-hidden md:min-h-[600px]">
+              <img
+                :src="slides[currentSlide].image"
+                :alt="slides[currentSlide].title"
+                class="absolute inset-0 h-full w-full object-cover transition-all duration-700"
+              />
 
-                <h1 class="mt-5 max-w-3xl text-4xl font-black leading-[0.95] tracking-tight text-neutral-900 md:text-6xl">
-                  Productos seleccionados para comprar más fácil y más rápido
-                </h1>
+              <div class="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,20,44,0.90)_0%,rgba(17,20,44,0.58)_38%,rgba(17,20,44,0.10)_100%)]" />
 
-                <p class="mt-5 max-w-2xl text-sm leading-7 text-neutral-600 md:text-base">
-                  Explora categorías, revisa productos destacados, descubre marcas disponibles y encuentra promociones activas en un catálogo más limpio y visual.
-                </p>
+              <img
+                :src="decoDots"
+                alt=""
+                class="pointer-events-none absolute right-0 top-0 hidden h-full w-full object-cover opacity-10 md:block"
+              />
 
-                <div class="mt-8 flex flex-wrap gap-3">
-                  <Link
-                    href="/productos"
-                    class="inline-flex items-center gap-2 rounded-full bg-[#11142C] px-7 py-3.5 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--brand-green)] hover:text-[#11142C] hover:shadow-[0_14px_30px_rgba(125,208,60,0.22)]"
-                  >
-                    Ver todos los productos
-                  </Link>
+              <div class="relative z-10 flex min-h-[440px] flex-col justify-between p-6 md:min-h-[600px] md:p-12">
+                <div class="max-w-[780px]">
+                  <div class="flex flex-wrap gap-3">
+                    <span class="inline-flex rounded-full bg-white/14 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white backdrop-blur">
+                      {{ slides[currentSlide].badge }}
+                    </span>
 
-                  <a
-                    href="#productos-destacados"
-                    class="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-7 py-3.5 text-sm font-black text-neutral-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/8 hover:text-[var(--brand-blue)]"
-                  >
-                    Explorar destacados
-                  </a>
-                </div>
-              </div>
-
-              <div class="relative min-h-[320px] overflow-hidden bg-[var(--brand-soft)]">
-                <img
-                  :src="heroImg"
-                  alt="Tienda Mr Lana"
-                  class="h-full w-full object-cover transition-transform duration-700 hover:scale-[1.04]"
-                />
-                <div class="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,20,44,0.06)_0%,rgba(17,20,44,0.36)_100%)]" />
-
-                <div class="absolute inset-x-5 bottom-5 grid gap-3 sm:grid-cols-2">
-                  <div class="rounded-[24px] border border-white/20 bg-white/15 p-4 backdrop-blur">
-                    <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
-                      Categorías
-                    </p>
-                    <p class="mt-2 text-3xl font-black text-white">
-                      {{ categorias.length }}
-                    </p>
+                    <span class="inline-flex rounded-full bg-[var(--brand-green)] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#11142C]">
+                      Catálogo actualizado
+                    </span>
                   </div>
 
-                  <div class="rounded-[24px] border border-white/20 bg-white/15 p-4 backdrop-blur">
-                    <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/70">
-                      Destacados
-                    </p>
-                    <p class="mt-2 text-3xl font-black text-white">
-                      {{ featuredProducts.length }}
-                    </p>
+                  <h1 class="mt-6 max-w-[760px] text-4xl font-black leading-[0.95] text-white md:text-7xl">
+                    {{ slides[currentSlide].title }}
+                  </h1>
+
+                  <p class="mt-5 max-w-[620px] text-base leading-7 text-white/85 md:text-xl">
+                    {{ slides[currentSlide].subtitle }}
+                  </p>
+
+                  <div class="mt-8 flex flex-wrap gap-3">
+                    <Link
+                      :href="slides[currentSlide].href"
+                      class="inline-flex items-center gap-2 rounded-full bg-[var(--brand-green)] px-7 py-3.5 text-sm font-black text-[#11142C] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(125,208,60,0.28)]"
+                    >
+                      {{ slides[currentSlide].cta }}
+                    </Link>
+
+                    <a
+                      href="#catalogo-categorias"
+                      class="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-7 py-3.5 text-sm font-black text-white backdrop-blur transition-all duration-300 hover:bg-white hover:text-[#11142C]"
+                    >
+                      Ver categorías
+                    </a>
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-4 pt-8 md:flex-row md:items-center md:justify-between">
+                  <div class="flex items-center gap-2">
+                    <button
+                      v-for="(slide, index) in slides"
+                      :key="slide.id"
+                      type="button"
+                      class="transition-all duration-300"
+                      :class="
+                        currentSlide === index
+                          ? 'h-3 w-10 rounded-full bg-white'
+                          : 'h-3 w-3 rounded-full bg-white/45 hover:bg-white/70'
+                      "
+                      @click="goToSlide(index)"
+                    />
+                  </div>
+
+                  <div class="flex items-center gap-3">
+                    <button
+                      type="button"
+                      class="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur transition-all duration-300 hover:bg-white hover:text-[#11142C]"
+                      @click="prevSlide"
+                    >
+                      ‹
+                    </button>
+
+                    <button
+                      type="button"
+                      class="inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-white text-[#11142C] transition-all duration-300 hover:scale-[1.04] hover:bg-[var(--brand-green)]"
+                      @click="nextSlide"
+                    >
+                      ›
+                    </button>
                   </div>
                 </div>
               </div>
@@ -302,9 +433,19 @@ function addToCart(producto: Producto) {
                 Revisa algunas de las marcas que forman parte del catálogo actual.
               </p>
             </div>
+
+            <Link
+              href="/productos"
+              class="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-6 py-3 text-sm font-black text-neutral-700 transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/8 hover:text-[var(--brand-blue)]"
+            >
+              Ver catálogo
+            </Link>
           </div>
 
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
+          <div
+            v-if="featuredBrands.length"
+            class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6"
+          >
             <article
               v-for="marca in featuredBrands"
               :key="marca.id"
@@ -340,6 +481,18 @@ function addToCart(producto: Producto) {
                 Ver productos
               </Link>
             </article>
+          </div>
+
+          <div
+            v-else
+            class="rounded-[30px] border border-neutral-200 bg-white px-6 py-12 text-center shadow-[0_18px_45px_rgba(17,20,44,0.06)]"
+          >
+            <h3 class="text-2xl font-black text-neutral-900">
+              Aún no se pudieron cargar marcas aquí
+            </h3>
+            <p class="mt-2 text-neutral-500">
+              El home necesita recibir marcas o productos desde backend para llenar esta sección.
+            </p>
           </div>
         </div>
       </section>

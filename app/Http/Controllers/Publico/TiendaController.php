@@ -3,19 +3,30 @@
 namespace App\Http\Controllers\Publico;
 
 use App\Http\Controllers\Controller;
+use App\Models\Marca;
 use App\Models\Banner;
-use App\Models\Categoria;
 use App\Models\Oferta;
+use App\Models\Categoria;
 use App\Models\Producto;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Storage;
 
-class TiendaController extends Controller
-{
-    public function index(): Response
-    {
+class TiendaController extends Controller {
+
+    public function index(): Response {
+        $marcas = Marca::query()
+            ->where('activa', true)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'slug', 'logo'])
+            ->map(fn (Marca $marca) => [
+                'id' => $marca->id,
+                'nombre' => $marca->nombre,
+                'slug' => $marca->slug,
+                'logo' => $this->resolveImageUrl($marca->logo),
+            ])
+            ->values();
         $categorias = Categoria::query()
             ->where('activa', true)
             ->orderBy('orden')
@@ -27,7 +38,6 @@ class TiendaController extends Controller
                 'imagen' => $this->resolveImageUrl($categoria->imagen),
             ])
             ->values();
-
         $destacados = Producto::query()
             ->with([
                 'categoria:id,nombre,slug',
@@ -57,7 +67,6 @@ class TiendaController extends Controller
             ])
             ->map(fn (Producto $producto) => $this->mapProductoPublico($producto))
             ->values();
-
         $banners = Banner::query()
             ->where('activo', true)
             ->where(function ($query) {
@@ -82,16 +91,15 @@ class TiendaController extends Controller
                 ];
             })
             ->values();
-
         return Inertia::render('Tienda/Index', [
+            'marcas' => $marcas,
             'categorias' => $categorias,
             'destacados' => $destacados,
             'banners' => $banners,
         ]);
     }
 
-    public function catalogo(Request $request): Response
-    {
+    public function catalogo(Request $request): Response {
         $categorias = Categoria::query()
             ->where('activa', true)
             ->orderBy('orden')
@@ -103,7 +111,6 @@ class TiendaController extends Controller
                 'imagen' => $this->resolveImageUrl($categoria->imagen),
             ])
             ->values();
-
         $productos = Producto::query()
             ->with([
                 'categoria:id,nombre,slug',
@@ -131,7 +138,6 @@ class TiendaController extends Controller
             ])
             ->map(fn (Producto $producto) => $this->mapProductoPublico($producto))
             ->values();
-
         return Inertia::render('Tienda/Catalogo', [
             'categorias' => $categorias,
             'productos' => $productos,
@@ -142,15 +148,13 @@ class TiendaController extends Controller
         ]);
     }
 
-    public function show(Producto $producto): Response
-    {
+    public function show(Producto $producto): Response {
         $producto->load([
             'categoria:id,nombre,slug',
             'marca:id,nombre,slug',
             'imagenes:id,producto_id,ruta,orden',
             'ofertas:id,nombre,tipo,valor,aplica_a,categoria_id,marca_id,inicia_en,termina_en,activa',
         ]);
-
         $relacionados = Producto::query()
             ->with([
                 'categoria:id,nombre,slug',
@@ -180,25 +184,21 @@ class TiendaController extends Controller
             ])
             ->map(fn (Producto $item) => $this->mapProductoPublico($item))
             ->values();
-
         return Inertia::render('Tienda/Show', [
             'producto' => $this->mapProductoPublico($producto),
             'relacionados' => $relacionados,
         ]);
     }
 
-    private function mapProductoPublico(Producto $producto): array
-    {
+    private function mapProductoPublico(Producto $producto): array {
         $imagenes = $producto->imagenes
             ->sortBy([
                 ['orden', 'asc'],
                 ['id', 'asc'],
             ])
             ->values();
-
         $primeraImagen = $imagenes->first()?->ruta;
         $pricing = $this->resolveProductoPricing($producto);
-
         return [
             'id' => $producto->id,
             'categoria_id' => $producto->categoria_id,
@@ -240,7 +240,6 @@ class TiendaController extends Controller
     {
         $precioOriginal = round((float) $producto->precio, 2);
         $oferta = $this->resolveOfertaForProducto($producto);
-
         if (! $oferta) {
             return [
                 'precio_original' => $precioOriginal,
@@ -250,18 +249,14 @@ class TiendaController extends Controller
                 'oferta' => null,
             ];
         }
-
         $precioFinal = $precioOriginal;
-
         if ($oferta->tipo === 'porcentaje') {
             $precioFinal = $precioOriginal - ($precioOriginal * ((float) $oferta->valor / 100));
         } elseif ($oferta->tipo === 'monto_fijo') {
             $precioFinal = $precioOriginal - (float) $oferta->valor;
         }
-
         $precioFinal = max(0, round($precioFinal, 2));
         $descuentoOferta = round($precioOriginal - $precioFinal, 2);
-
         if ($descuentoOferta <= 0) {
             return [
                 'precio_original' => $precioOriginal,
@@ -271,7 +266,6 @@ class TiendaController extends Controller
                 'oferta' => null,
             ];
         }
-
         return [
             'precio_original' => $precioOriginal,
             'precio_final' => $precioFinal,
@@ -286,18 +280,14 @@ class TiendaController extends Controller
         ];
     }
 
-    private function resolveOfertaForProducto(Producto $producto): ?Oferta
-    {
+    private function resolveOfertaForProducto(Producto $producto): ?Oferta {
         $now = now();
-
         $ofertasProducto = $producto->ofertas
             ->filter(fn (Oferta $oferta) => $this->isOfertaActiva($oferta, $now))
             ->sortByDesc('id');
-
         if ($ofertasProducto->isNotEmpty()) {
             return $ofertasProducto->first();
         }
-
         $ofertaCategoria = Oferta::query()
             ->where('activa', true)
             ->where('aplica_a', 'categoria')
@@ -310,11 +300,9 @@ class TiendaController extends Controller
             })
             ->latest('id')
             ->first();
-
         if ($ofertaCategoria) {
             return $ofertaCategoria;
         }
-
         return Oferta::query()
             ->where('activa', true)
             ->where('aplica_a', 'marca')
@@ -334,24 +322,19 @@ class TiendaController extends Controller
         if (! $oferta->activa) {
             return false;
         }
-
         if ($oferta->inicia_en && $oferta->inicia_en->gt($now)) {
             return false;
         }
-
         if ($oferta->termina_en && $oferta->termina_en->lt($now)) {
             return false;
         }
-
         return true;
     }
 
-    private function resolveImageUrl(?string $path): ?string
-    {
+    private function resolveImageUrl(?string $path): ?string {
         if (! $path) {
             return null;
         }
-
         if (
             str_starts_with($path, 'http://') ||
             str_starts_with($path, 'https://') ||
@@ -359,7 +342,6 @@ class TiendaController extends Controller
         ) {
             return $path;
         }
-
         return Storage::url($path);
     }
 }
