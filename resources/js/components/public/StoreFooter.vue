@@ -97,11 +97,13 @@ const UI = {
         <address class="not-italic min-w-0 md:col-span-6 lg:col-span-4 xl:col-span-3">
           <div class="mt-4 space-y-4">
             <a
-              href="tel:+527773791464"
-              class="group inline-flex items-center gap-3 text-[15px] font-semibold text-slate-900 transition hover:text-emerald-600"
+            href="https://wa.me/527774225973"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="group inline-flex items-center gap-3 text-[15px] font-semibold text-slate-900 transition hover:text-emerald-600"
             >
-              <span class="h-[18px] w-[18px] text-emerald-500" v-html="icons.phone" aria-hidden="true" />
-              <span>(777) 422-5973</span>
+            <span class="h-[18px] w-[18px] text-emerald-500" v-html="icons.phone" aria-hidden="true" />
+            <span>(777) 422-5973</span>
             </a>
             <br>
             <a
