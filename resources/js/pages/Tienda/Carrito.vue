@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import heroImg from '@/img/hero-tienda.jpeg'
 
@@ -9,6 +9,14 @@ interface OfertaInfo {
   nombre: string
   tipo: string
   valor: number
+}
+
+interface CuponInfo {
+  codigo: string
+  nombre: string
+  tipo: string
+  valor: number
+  descuento_aplicado: number
 }
 
 interface ItemCarrito {
@@ -31,6 +39,7 @@ interface ItemCarrito {
 
 const props = defineProps<{
   items: ItemCarrito[]
+  cupon: CuponInfo | null
   resumen: {
     subtotal: number
     envio: number
@@ -43,7 +52,21 @@ const props = defineProps<{
 }>()
 
 const totalItems = computed(() => props.resumen.total_productos || props.items.length)
-const couponCode = ref('')
+const couponCode = ref(props.cupon?.codigo ?? '')
+
+const page = usePage<{
+  flash?: {
+    success?: string
+    error?: string
+  }
+}>()
+
+const couponError = ref('')
+const applyingCoupon = ref(false)
+const removingCoupon = ref(false)
+
+const flashSuccess = computed(() => page.props.flash?.success ?? '')
+const flashError = computed(() => page.props.flash?.error ?? '')
 
 const formatearMoneda = (valor: number) => {
   return new Intl.NumberFormat('es-MX', {
@@ -98,14 +121,42 @@ const vaciarCarrito = () => {
 }
 
 const aplicarCupon = () => {
-  router.post(
-    '/carrito/cupon',
-    { codigo: couponCode.value },
-    {
-      preserveScroll: true,
-      preserveState: true,
-    },
-  )
+    couponError.value = ''
+    if (!couponCode.value.trim()) {
+        couponError.value = 'Ingresa un código de descuento.'
+        return
+    }
+    if (!props.items.length) {
+        couponError.value = 'Tu carrito está vacío.'
+        return
+    }
+    applyingCoupon.value = true
+    router.post(
+        '/carrito/cupon',
+        { codigo: couponCode.value.trim() },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => {
+                applyingCoupon.value = false
+            },
+        },
+    )
+}
+
+const quitarCupon = () => {
+    removingCoupon.value = true
+    couponError.value = ''
+    router.delete('/carrito/cupon', {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+            couponCode.value = ''
+        },
+        onFinish: () => {
+            removingCoupon.value = false
+        },
+    })
 }
 </script>
 
@@ -145,7 +196,7 @@ const aplicarCupon = () => {
 
         <div class="flex flex-col gap-3 sm:flex-row">
           <Link
-            href="/"
+            href="/productos"
             class="inline-flex items-center justify-center rounded-full border border-[#30beef] bg-white px-6 py-3 text-sm font-black text-[#30beef] shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#30beef] hover:text-white hover:shadow-md"
           >
             Seguir comprando
@@ -342,7 +393,7 @@ const aplicarCupon = () => {
               </p>
 
               <Link
-                href="/"
+                href="/productos"
                 class="mt-6 inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#7dd03c] to-[#30beef] px-6 py-3 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:opacity-90 hover:shadow-md"
               >
                 Ir a la tienda
@@ -368,13 +419,51 @@ const aplicarCupon = () => {
               class="mt-4 h-12 w-full rounded-2xl border border-[#d5d5d5] bg-white px-4 text-sm text-neutral-900 outline-none transition-all duration-300 placeholder:text-neutral-400 focus:border-[#30beef] focus:ring-4 focus:ring-[#30beef]/10"
             />
 
-            <button
-              type="button"
-              class="mt-4 w-full rounded-full border border-[#30beef] px-4 py-3 font-black text-[#30beef] transition-all duration-300 hover:bg-[#30beef] hover:text-white hover:shadow-md"
-              @click="aplicarCupon"
+            <p v-if="couponError" class="mt-2 text-sm font-semibold text-red-500">
+                {{ couponError }}
+            </p>
+
+            <p v-else-if="flashError" class="mt-2 text-sm font-semibold text-red-500">
+                {{ flashError }}
+            </p>
+
+            <p v-else-if="flashSuccess" class="mt-2 text-sm font-semibold text-emerald-600">
+                {{ flashSuccess }}
+            </p>
+
+            <div class="mt-4 grid gap-3">
+                <button type="button"
+                class="w-full rounded-full border border-[#30beef] px-4 py-3 font-black text-[#30beef] transition-all duration-300 hover:bg-[#30beef] hover:text-white hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="applyingCoupon"
+                @click="aplicarCupon">
+                    {{ applyingCoupon ? 'Aplicando cupón...' : 'Aplicar código' }}
+                </button>
+
+                <button v-if="cupon" type="button"
+                class="w-full rounded-full border border-red-200 px-4 py-3 font-black text-red-500 transition-all duration-300 hover:bg-red-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="removingCoupon"
+                @click="quitarCupon">
+                    {{ removingCoupon ? 'Quitando cupón...' : 'Quitar cupón' }}
+                </button>
+            </div>
+
+            <div
+              v-if="cupon"
+              class="mt-5 rounded-[24px] border border-emerald-200 bg-emerald-50 p-4"
             >
-              Aplicar código
-            </button>
+              <p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-600">
+                Cupón aplicado
+              </p>
+              <p class="mt-2 text-lg font-black text-neutral-900">
+                {{ cupon.codigo }}
+              </p>
+              <p class="mt-1 text-sm text-neutral-600">
+                {{ cupon.nombre }}
+              </p>
+              <p class="mt-2 text-sm font-semibold text-emerald-700">
+                Descuento: {{ formatearMoneda(cupon.descuento_aplicado) }}
+              </p>
+            </div>
           </div>
 
           <div class="rounded-[30px] border border-[#dfdfdf] bg-white p-6 shadow-[0_18px_60px_rgba(9,17,28,0.06)] transition-shadow duration-300 hover:shadow-[0_22px_70px_rgba(9,17,28,0.08)]">
@@ -403,7 +492,7 @@ const aplicarCupon = () => {
               >
                 <span class="text-neutral-500">Descuento por ofertas</span>
                 <span class="font-bold text-emerald-600">
-                  -{{ formatearMoneda(resumen.descuento_ofertas) }}
+                  -{{ formatearMoneda(resumen.descuento_ofertas ?? 0) }}
                 </span>
               </div>
 
@@ -413,7 +502,7 @@ const aplicarCupon = () => {
               >
                 <span class="text-neutral-500">Cupón</span>
                 <span class="font-bold text-emerald-600">
-                  -{{ formatearMoneda(resumen.descuento_cupon) }}
+                  -{{ formatearMoneda(resumen.descuento_cupon ?? 0) }}
                 </span>
               </div>
 

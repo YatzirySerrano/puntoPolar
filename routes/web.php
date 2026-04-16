@@ -18,15 +18,20 @@ use App\Http\Controllers\Vendedor\PedidoController as VendedorPedidoController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [TiendaController::class, 'index'])->name('home');
-
+Route::get('/productos', [TiendaController::class, 'catalogo'])->name('tienda.catalogo');
 Route::get('/productos/{producto:slug}', [TiendaController::class, 'show'])->name('tienda.show');
-
- Route::get('/productos', [TiendaController::class, 'catalogo'])->name('tienda.catalogo');
-
- Route::get('/productos/{producto:slug}', [TiendaController::class, 'show'])->name('tienda.show');
 
 Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
 Route::post('/carrito/agregar', [CarritoController::class, 'agregar'])->name('carrito.agregar');
+
+/*
+|--------------------------------------------------------------------------
+| Cupón del carrito
+|--------------------------------------------------------------------------
+*/
+Route::post('/carrito/cupon', [CarritoController::class, 'aplicarCupon'])->name('carrito.cupon.aplicar');
+Route::delete('/carrito/cupon', [CarritoController::class, 'quitarCupon'])->name('carrito.cupon.quitar');
+
 Route::patch('/carrito/{producto}', [CarritoController::class, 'actualizar'])->name('carrito.actualizar');
 Route::delete('/carrito/{producto}', [CarritoController::class, 'eliminar'])->name('carrito.eliminar');
 Route::delete('/carrito', [CarritoController::class, 'vaciar'])->name('carrito.vaciar');
@@ -169,7 +174,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->name('configuraciones.update');
             Route::delete('/configuraciones/{configuracion}', [AdminConfiguracionController::class, 'destroy'])
                 ->name('configuraciones.destroy');
-
         });
 });
 

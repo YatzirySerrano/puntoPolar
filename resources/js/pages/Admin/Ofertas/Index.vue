@@ -947,12 +947,14 @@ onBeforeUnmount(() => {
                                                 <label class="mb-2 block text-sm font-bold text-neutral-700">
                                                     Tipo
                                                 </label>
-                                                <input
-                                                    v-model="form.tipo"
-                                                    type="text"
-                                                    placeholder="Ej. porcentaje o monto_fijo"
-                                                    class="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm transition-all duration-200 placeholder:text-neutral-400 hover:border-neutral-300 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-100"
-                                                />
+
+                                                <select v-model="form.tipo"
+                                                class="w-full rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm transition-all duration-200 focus:border-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-100">
+                                                    <option value="">Selecciona un tipo</option>
+                                                    <option value="porcentaje">Porcentaje</option>
+                                                    <option value="monto_fijo">Monto fijo</option>
+                                                </select>
+
                                                 <p v-if="form.errors.tipo" class="mt-2 text-sm font-medium text-red-600">
                                                     {{ form.errors.tipo }}
                                                 </p>

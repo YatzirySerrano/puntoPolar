@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Publico;
 
 use App\Http\Controllers\Controller;
+use App\Models\Cupon;
 use App\Models\Oferta;
 use App\Models\Producto;
 use Illuminate\Http\RedirectResponse;
@@ -19,8 +20,11 @@ class CarritoController extends Controller
         $carrito = collect(session()->get('carrito', []));
 
         if ($carrito->isEmpty()) {
+            session()->forget('carrito_cupon');
+
             return Inertia::render('Tienda/Carrito', [
                 'items' => [],
+                'cupon' => null,
                 'resumen' => [
                     'subtotal' => 0,
                     'envio' => 0,
@@ -100,15 +104,43 @@ class CarritoController extends Controller
 
         $this->syncSessionFromItems($items);
 
-        $subtotal = (float) $items->sum('subtotal');
-        $descuentoOfertas = (float) $items->sum('descuento_oferta');
-        $descuentoCupon = round((float) data_get(session('carrito_cupon', []), 'descuento_aplicado', 0), 2);
+        $subtotal = round((float) $items->sum('subtotal'), 2);
+        $descuentoOfertas = round((float) $items->sum('descuento_oferta'), 2);
         $envio = 0.0;
+
+        $cuponSession = session('carrito_cupon');
+        $cuponAplicado = null;
+        $descuentoCupon = 0.0;
+
+        if ($cuponSession && ! empty($cuponSession['codigo'])) {
+            $cupon = Cupon::query()
+                ->where('codigo', mb_strtoupper(trim((string) $cuponSession['codigo'])))
+                ->where('activo', true)
+                ->first();
+
+            if ($cupon) {
+                $descuentoCupon = $this->calculateCuponDiscount($subtotal, $cupon);
+
+                $cuponAplicado = [
+                    'codigo' => $cupon->codigo,
+                    'nombre' => $cupon->nombre,
+                    'tipo' => $cupon->tipo,
+                    'valor' => (float) $cupon->valor,
+                    'descuento_aplicado' => $descuentoCupon,
+                ];
+
+                session()->put('carrito_cupon', $cuponAplicado);
+            } else {
+                session()->forget('carrito_cupon');
+            }
+        }
+
         $descuento = round($descuentoOfertas + $descuentoCupon, 2);
         $total = round(max(0, $subtotal + $envio - $descuentoCupon), 2);
 
         return Inertia::render('Tienda/Carrito', [
             'items' => $items,
+            'cupon' => $cuponAplicado,
             'resumen' => [
                 'subtotal' => round($subtotal, 2),
                 'envio' => round($envio, 2),
@@ -246,14 +278,75 @@ class CarritoController extends Controller
         unset($carrito[(string) $producto->id]);
         session()->put('carrito', $carrito);
 
+        if (empty($carrito)) {
+            session()->forget('carrito_cupon');
+        }
+
         return back()->with('success', $producto->nombre.' se quitó del carrito.');
     }
 
     public function vaciar(): RedirectResponse
     {
         session()->forget('carrito');
+        session()->forget('carrito_cupon');
 
         return back()->with('success', 'Tu carrito se vació correctamente.');
+    }
+
+    public function aplicarCupon(Request $request): RedirectResponse
+    {
+        $codigo = trim((string) $request->input('codigo', ''));
+
+        if ($codigo === '') {
+            return back()->with('error', 'Debes ingresar un código de cupón.');
+        }
+
+        $carrito = collect(session()->get('carrito', []));
+
+        if ($carrito->isEmpty()) {
+            return back()->with('error', 'Tu carrito está vacío.');
+        }
+
+        $cupon = Cupon::query()
+            ->where('codigo', mb_strtoupper($codigo))
+            ->where('activo', true)
+            ->first();
+
+        if (! $cupon) {
+            return back()->with('error', 'El cupón no existe o no está disponible.');
+        }
+
+        $subtotal = round(
+            (float) $carrito->sum(fn ($item) => (float) ($item['subtotal'] ?? 0)),
+            2
+        );
+
+        if ($subtotal <= 0) {
+            return back()->with('error', 'No se pudo aplicar el cupón al carrito actual.');
+        }
+
+        $descuentoAplicado = $this->calculateCuponDiscount($subtotal, $cupon);
+
+        if ($descuentoAplicado <= 0) {
+            return back()->with('error', 'El cupón no genera descuento para este carrito.');
+        }
+
+        session()->put('carrito_cupon', [
+            'codigo' => $cupon->codigo,
+            'nombre' => $cupon->nombre,
+            'tipo' => $cupon->tipo,
+            'valor' => (float) $cupon->valor,
+            'descuento_aplicado' => $descuentoAplicado,
+        ]);
+
+        return back()->with('success', 'Cupón aplicado correctamente.');
+    }
+
+    public function quitarCupon(): RedirectResponse
+    {
+        session()->forget('carrito_cupon');
+
+        return back()->with('success', 'Cupón eliminado del carrito.');
     }
 
     private function syncSessionFromItems(Collection $items): void
@@ -282,11 +375,18 @@ class CarritoController extends Controller
             ];
         }
 
+        $tipo = trim(mb_strtolower((string) $oferta->tipo));
+        $tipo = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', ' '],
+            ['a', 'e', 'i', 'o', 'u', '_'],
+            $tipo
+        );
+
         $precioFinal = $precioOriginal;
 
-        if ($oferta->tipo === 'porcentaje') {
+        if ($tipo === 'porcentaje') {
             $precioFinal = $precioOriginal - ($precioOriginal * ((float) $oferta->valor / 100));
-        } elseif ($oferta->tipo === 'monto_fijo') {
+        } elseif (in_array($tipo, ['monto_fijo', 'montofijo'], true)) {
             $precioFinal = $precioOriginal - (float) $oferta->valor;
         }
 
@@ -329,6 +429,8 @@ class CarritoController extends Controller
             return $ofertasProducto->first();
         }
 
+        $ofertas = collect();
+
         $ofertaCategoria = Oferta::query()
             ->where('activa', true)
             ->where('aplica_a', 'categoria')
@@ -343,10 +445,10 @@ class CarritoController extends Controller
             ->first();
 
         if ($ofertaCategoria) {
-            return $ofertaCategoria;
+            $ofertas->push($ofertaCategoria);
         }
 
-        return Oferta::query()
+        $ofertaMarca = Oferta::query()
             ->where('activa', true)
             ->where('aplica_a', 'marca')
             ->where('marca_id', $producto->marca_id)
@@ -358,6 +460,59 @@ class CarritoController extends Controller
             })
             ->latest('id')
             ->first();
+
+        if ($ofertaMarca) {
+            $ofertas->push($ofertaMarca);
+        }
+
+        if ($ofertas->isEmpty()) {
+            return null;
+        }
+
+        return $ofertas
+            ->sortByDesc(fn (Oferta $oferta) => $this->calculateDiscountAmount($producto, $oferta))
+            ->first();
+    }
+
+    private function calculateDiscountAmount(Producto $producto, Oferta $oferta): float
+    {
+        $precio = (float) $producto->precio;
+        $tipo = trim(mb_strtolower((string) $oferta->tipo));
+        $tipo = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', ' '],
+            ['a', 'e', 'i', 'o', 'u', '_'],
+            $tipo
+        );
+
+        if ($tipo === 'porcentaje') {
+            return round($precio * ((float) $oferta->valor / 100), 2);
+        }
+
+        if (in_array($tipo, ['monto_fijo', 'montofijo'], true)) {
+            return round(min($precio, (float) $oferta->valor), 2);
+        }
+
+        return 0;
+    }
+
+    private function calculateCuponDiscount(float $subtotal, Cupon $cupon): float
+    {
+        $tipo = trim(mb_strtolower((string) $cupon->tipo));
+        $tipo = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', ' '],
+            ['a', 'e', 'i', 'o', 'u', '_'],
+            $tipo
+        );
+
+        $discount = 0.0;
+
+        if ($tipo === 'porcentaje') {
+            $discount = $subtotal * ((float) $cupon->valor / 100);
+        } elseif (in_array($tipo, ['monto_fijo', 'montofijo'], true)) {
+            $discount = (float) $cupon->valor;
+        }
+
+        return round(min($subtotal, max(0, $discount)), 2);
     }
 
     private function isOfertaActiva(Oferta $oferta, $now): bool
@@ -402,7 +557,6 @@ class CarritoController extends Controller
         if ($path === '') {
             return null;
         }
-
         if (
             str_starts_with($path, 'http://') ||
             str_starts_with($path, 'https://')
@@ -420,4 +574,5 @@ class CarritoController extends Controller
 
         return Storage::url($path);
     }
+
 }
