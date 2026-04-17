@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { computed, onMounted, watch } from 'vue';
 import { useCurrency } from '@/composables/useCurrency';
@@ -12,6 +12,7 @@ interface Pedido {
     nombre_cliente: string;
     correo_cliente: string;
     items: Array<{ id: number; cantidad: number }>;
+    created_at?: string | null;
 }
 
 const page = usePage();
@@ -45,7 +46,7 @@ const props = defineProps<{
 }>();
 
 const { formatCurrency } = useCurrency();
-const form = useForm({ estatus: '' });
+const form = useForm({ estatus: '', comentario: '' });
 
 const totalVentas = computed(() =>
     props.pedidos.data.reduce((acc, pedido) => acc + Number(pedido.total), 0),
@@ -60,20 +61,18 @@ const actualizarEstatus = async (pedido: Pedido) => {
             {},
         ),
         inputValue: pedido.estatus,
+        inputPlaceholder: 'Selecciona un estatus',
         showCancelButton: true,
         confirmButtonText: 'Guardar',
         cancelButtonText: 'Cancelar',
     });
 
-    if (
-        !result.isConfirmed ||
-        !result.value ||
-        result.value === pedido.estatus
-    ) {
+    if (!result.isConfirmed || !result.value || result.value === pedido.estatus) {
         return;
     }
 
     form.estatus = result.value;
+    form.comentario = '';
     form.patch(`/admin/pedidos/${pedido.id}/estatus`, { preserveScroll: true });
 };
 </script>
@@ -88,17 +87,17 @@ const actualizarEstatus = async (pedido: Pedido) => {
             <h1 class="text-2xl font-black sm:text-3xl">Gestión de pedidos</h1>
             <div class="mt-4 grid gap-3 sm:grid-cols-3">
                 <article class="rounded-2xl bg-white p-4 shadow-sm">
-                    <p class="text-xs text-neutral-500 uppercase">Pedidos</p>
+                    <p class="text-xs uppercase text-neutral-500">Pedidos</p>
                     <p class="text-2xl font-black">{{ pedidos.data.length }}</p>
                 </article>
                 <article class="rounded-2xl bg-white p-4 shadow-sm">
-                    <p class="text-xs text-neutral-500 uppercase">Ventas</p>
+                    <p class="text-xs uppercase text-neutral-500">Ventas</p>
                     <p class="text-2xl font-black">
                         {{ formatCurrency(totalVentas) }}
                     </p>
                 </article>
                 <article class="rounded-2xl bg-white p-4 shadow-sm">
-                    <p class="text-xs text-neutral-500 uppercase">Filtro</p>
+                    <p class="text-xs uppercase text-neutral-500">Filtro</p>
                     <p class="text-2xl font-black">
                         {{ filters.estatus || 'Todos' }}
                     </p>
@@ -109,17 +108,9 @@ const actualizarEstatus = async (pedido: Pedido) => {
                 <button
                     type="button"
                     class="rounded-full border px-4 py-1.5 text-xs font-bold uppercase"
-                    :class="
-                        !filters.estatus
-                            ? 'bg-[var(--brand-blue)] text-white'
-                            : 'bg-white'
-                    "
+                    :class="!filters.estatus ? 'bg-[var(--brand-blue)] text-white' : 'bg-white'"
                     @click="
-                        router.get(
-                            '/admin/pedidos',
-                            {},
-                            { preserveState: true, replace: true },
-                        )
+                        router.get('/admin/pedidos', {}, { preserveState: true, replace: true })
                     "
                 >
                     Todos
@@ -129,17 +120,9 @@ const actualizarEstatus = async (pedido: Pedido) => {
                     :key="estatus"
                     type="button"
                     class="rounded-full border px-4 py-1.5 text-xs font-bold uppercase"
-                    :class="
-                        filters.estatus === estatus
-                            ? 'bg-[var(--brand-blue)] text-white'
-                            : 'bg-white'
-                    "
+                    :class="filters.estatus === estatus ? 'bg-[var(--brand-blue)] text-white' : 'bg-white'"
                     @click="
-                        router.get(
-                            '/admin/pedidos',
-                            { estatus },
-                            { preserveState: true, replace: true },
-                        )
+                        router.get('/admin/pedidos', { estatus }, { preserveState: true, replace: true })
                     "
                 >
                     {{ estatus }}
@@ -163,10 +146,9 @@ const actualizarEstatus = async (pedido: Pedido) => {
                             {{ pedido.correo_cliente }}
                         </p>
                     </div>
-                    <span
-                        class="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold uppercase"
-                        >{{ pedido.estatus }}</span
-                    >
+                    <span class="rounded-full bg-neutral-100 px-3 py-1 text-xs font-bold uppercase">
+                        {{ pedido.estatus }}
+                    </span>
                 </div>
 
                 <div class="mt-4 grid grid-cols-2 gap-2 text-sm">
@@ -180,13 +162,22 @@ const actualizarEstatus = async (pedido: Pedido) => {
                     </p>
                 </div>
 
-                <button
-                    type="button"
-                    class="mt-4 w-full rounded-full bg-[var(--brand-blue)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-90"
-                    @click="actualizarEstatus(pedido)"
-                >
-                    Cambiar estatus
-                </button>
+                <div class="mt-4 grid grid-cols-2 gap-3">
+                    <Link
+                        :href="`/admin/pedidos/${pedido.id}`"
+                        class="inline-flex items-center justify-center rounded-full border border-neutral-200 px-4 py-2 text-sm font-bold transition hover:bg-neutral-50"
+                    >
+                        Ver detalle
+                    </Link>
+
+                    <button
+                        type="button"
+                        class="rounded-full bg-[var(--brand-blue)] px-4 py-2 text-sm font-bold text-white transition hover:brightness-90"
+                        @click="actualizarEstatus(pedido)"
+                    >
+                        Cambiar estatus
+                    </button>
+                </div>
             </article>
         </div>
     </div>

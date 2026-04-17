@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useCurrency } from '@/composables/useCurrency';
 
 interface Pedido {
@@ -8,6 +8,8 @@ interface Pedido {
     estatus: string;
     total: number | string;
     nombre_cliente: string;
+    correo_cliente?: string | null;
+    items_count?: number;
 }
 
 const props = defineProps<{
@@ -16,10 +18,11 @@ const props = defineProps<{
 }>();
 
 const { formatCurrency } = useCurrency();
-const form = useForm({ estatus: '' });
+const form = useForm({ estatus: '', comentario: '' });
 
 const actualizarEstatus = (pedidoId: number, estatus: string) => {
     form.estatus = estatus;
+    form.comentario = '';
     form.patch(`/vendedor/pedidos/${pedidoId}/estatus`, {
         preserveScroll: true,
     });
@@ -34,7 +37,9 @@ const actualizarEstatus = (pedidoId: number, estatus: string) => {
             class="rounded-3xl border border-[var(--brand-gray)]/60 bg-gradient-to-r from-white to-[var(--brand-soft)] p-4 shadow-sm sm:p-6"
         >
             <h1 class="text-2xl font-black">Pedidos operativos</h1>
-            <p class="text-sm text-neutral-500">Módulo para vendedores.</p>
+            <p class="text-sm text-neutral-500">
+                Módulo para seguimiento operativo de pedidos pagados.
+            </p>
         </header>
 
         <div class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
@@ -45,8 +50,12 @@ const actualizarEstatus = (pedidoId: number, estatus: string) => {
             >
                 <p class="text-xs text-neutral-500">{{ pedido.folio }}</p>
                 <p class="font-black">{{ pedido.nombre_cliente }}</p>
-                <p class="mt-1 text-lg font-black">
+                <p class="text-sm text-neutral-500">{{ pedido.correo_cliente || 'Sin correo' }}</p>
+                <p class="mt-2 text-lg font-black">
                     {{ formatCurrency(pedido.total) }}
+                </p>
+                <p class="mt-1 text-sm text-neutral-500">
+                    Items: {{ pedido.items_count ?? 0 }}
                 </p>
 
                 <select
@@ -67,6 +76,13 @@ const actualizarEstatus = (pedidoId: number, estatus: string) => {
                         {{ estatus }}
                     </option>
                 </select>
+
+                <Link
+                    :href="`/vendedor/pedidos/${pedido.id}`"
+                    class="mt-4 inline-flex w-full items-center justify-center rounded-full border border-neutral-200 px-4 py-2 text-sm font-bold transition hover:bg-neutral-50"
+                >
+                    Ver detalle
+                </Link>
             </article>
         </div>
     </div>

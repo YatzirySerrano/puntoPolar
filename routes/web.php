@@ -11,10 +11,12 @@ use App\Http\Controllers\Admin\PagoController as AdminPagoController;
 use App\Http\Controllers\Admin\PedidoController as AdminPedidoController;
 use App\Http\Controllers\Admin\ProductoController as AdminProductoController;
 use App\Http\Controllers\Admin\UsuarioController as AdminUsuarioController;
+use App\Http\Controllers\Cliente\DireccionController;
 use App\Http\Controllers\Cliente\MisPedidosController;
 use App\Http\Controllers\Publico\CarritoController;
 use App\Http\Controllers\Publico\TiendaController;
 use App\Http\Controllers\Vendedor\PedidoController as VendedorPedidoController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [TiendaController::class, 'index'])->name('home');
@@ -37,11 +39,22 @@ Route::delete('/carrito/{producto}', [CarritoController::class, 'eliminar'])->na
 Route::delete('/carrito', [CarritoController::class, 'vaciar'])->name('carrito.vaciar');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('/dashboard', 'Dashboard')->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::middleware('role:cliente,admin,vendedor')->group(function () {
         Route::get('/mi-cuenta/pedidos', [MisPedidosController::class, 'index'])
             ->name('cliente.pedidos.index');
+        Route::get('/mi-cuenta/pedidos/{pedido}', [MisPedidosController::class, 'show'])
+            ->name('cliente.pedidos.show');
+
+        Route::get('/mi-cuenta/direcciones', [DireccionController::class, 'index'])
+            ->name('cliente.direcciones.index');
+        Route::post('/mi-cuenta/direcciones', [DireccionController::class, 'store'])
+            ->name('cliente.direcciones.store');
+        Route::put('/mi-cuenta/direcciones/{direccion}', [DireccionController::class, 'update'])
+            ->name('cliente.direcciones.update');
+        Route::delete('/mi-cuenta/direcciones/{direccion}', [DireccionController::class, 'destroy'])
+            ->name('cliente.direcciones.destroy');
     });
 
     Route::prefix('vendedor')

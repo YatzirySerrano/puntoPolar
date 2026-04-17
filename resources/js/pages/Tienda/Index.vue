@@ -280,15 +280,6 @@ function addToCart(producto: Producto) {
 
               <div class="relative z-10 flex min-h-[440px] flex-col justify-between p-6 md:min-h-[600px] md:p-12">
                 <div class="max-w-[780px]">
-                  <div class="flex flex-wrap gap-3">
-                    <span class="inline-flex rounded-full bg-white/14 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white backdrop-blur">
-                      {{ slides[currentSlide].badge }}
-                    </span>
-
-                    <span class="inline-flex rounded-full bg-[var(--brand-green)] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#11142C]">
-                      Catálogo actualizado
-                    </span>
-                  </div>
 
                   <h1 class="mt-6 max-w-[760px] text-4xl font-black leading-[0.95] text-white md:text-7xl">
                     {{ slides[currentSlide].title }}
