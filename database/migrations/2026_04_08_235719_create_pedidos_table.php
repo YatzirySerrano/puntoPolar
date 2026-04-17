@@ -32,12 +32,12 @@ return new class extends Migration {
             $table->text('notas_cliente')->nullable();
             $table->timestamp('pagado_en')->nullable();
             $table->timestamp('cancelado_en')->nullable();
-            $table->string('paqueteria', 120)->nullable()->after('notas_cliente');
-            $table->string('numero_guia', 180)->nullable()->after('paqueteria');
-            $table->timestamp('preparando_en')->nullable()->after('numero_guia');
-            $table->timestamp('enviado_en')->nullable()->after('preparando_en');
-            $table->timestamp('entregado_en')->nullable()->after('enviado_en');
-            $table->text('comentario_interno')->nullable()->after('entregado_en');
+            $table->string('paqueteria', 120)->nullable();
+            $table->string('numero_guia', 180)->nullable();
+            $table->timestamp('preparando_en')->nullable();
+            $table->timestamp('enviado_en')->nullable();
+            $table->timestamp('entregado_en')->nullable();
+            $table->text('comentario_interno')->nullable();
             $table->timestamps();
             $table->index(['estatus', 'created_at']);
         });
