@@ -16,6 +16,7 @@ use App\Http\Controllers\Cliente\MisPedidosController;
 use App\Http\Controllers\Publico\CarritoController;
 use App\Http\Controllers\Publico\TiendaController;
 use App\Http\Controllers\Vendedor\PedidoController as VendedorPedidoController;
+use App\Http\Controllers\Publico\CheckoutController;
 use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -41,6 +42,18 @@ Route::delete('/carrito', [CarritoController::class, 'vaciar'])->name('carrito.v
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
+    Route::get('/checkout', [CheckoutController::class, 'index'])
+    ->name('checkout.index');
+
+    Route::post('/checkout', [CheckoutController::class, 'store'])
+        ->name('checkout.store');
+
+    Route::get('/checkout/gracias/{pedido}', [CheckoutController::class, 'gracias'])
+        ->name('checkout.gracias');
+
+    Route::post('/checkout/gracias/{pedido}/pagar', [CheckoutController::class, 'pagar'])
+    ->name('checkout.pagar');
+
     Route::middleware('role:cliente,admin,vendedor')->group(function () {
         Route::get('/mi-cuenta/pedidos', [MisPedidosController::class, 'index'])
             ->name('cliente.pedidos.index');
@@ -55,6 +68,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('cliente.direcciones.update');
         Route::delete('/mi-cuenta/direcciones/{direccion}', [DireccionController::class, 'destroy'])
             ->name('cliente.direcciones.destroy');
+
     });
 
     Route::prefix('vendedor')
