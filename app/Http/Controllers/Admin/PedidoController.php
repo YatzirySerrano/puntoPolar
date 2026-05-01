@@ -3,23 +3,80 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PedidoEstadoMail;
 use App\Models\Pedido;
 use App\Models\PedidoEstatusHistorial;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PedidoController extends Controller {
 
-    private const ESTATUS = ['pendiente', 'pagado', 'preparando', 'enviado', 'entregado', 'cancelado', 'reembolsado'];
+    private const ESTATUS = [
+        'pendiente',
+        'pagado',
+        'preparando',
+        'enviado',
+        'entregado',
+        'cancelado',
+        'reembolsado',
+    ];
+
+    private const TRANSICIONES = [
+        'pendiente' => ['pagado', 'cancelado'],
+        'pagado' => ['preparando', 'reembolsado'],
+        'preparando' => ['enviado', 'cancelado'],
+        'enviado' => ['entregado'],
+        'entregado' => [],
+        'cancelado' => [],
+        'reembolsado' => [],
+    ];
 
     public function index(Request $request): Response {
         $estatus = $request->string('estatus')->toString();
-        $pedidos = Pedido::query()
-            ->with(['user:id,name,email', 'items'])
+        $pago = $request->string('pago')->toString();
+        $buscar = trim($request->string('buscar')->toString());
+        $fechaDesde = $request->string('fecha_desde')->toString();
+        $fechaHasta = $request->string('fecha_hasta')->toString();
+
+        $query = Pedido::query()
+            ->with([
+                'user:id,name,email',
+                'items.producto:id,nombre,slug,imagen_principal',
+                'items.producto.imagenes:id,producto_id,ruta,principal,orden',
+                'pagos.metodoPago:id,nombre,clave',
+            ])
             ->when($estatus, fn ($query) => $query->where('estatus', $estatus))
+            ->when($pago, function ($query) use ($pago) {
+                $query->whereHas('pagos', fn ($subQuery) => $subQuery->where('estatus', $pago));
+            })
+            ->when($buscar, function ($query) use ($buscar) {
+                $query->where(function ($subQuery) use ($buscar) {
+                    $subQuery
+                        ->where('folio', 'like', "%{$buscar}%")
+                        ->orWhere('nombre_cliente', 'like', "%{$buscar}%")
+                        ->orWhere('correo_cliente', 'like', "%{$buscar}%")
+                        ->orWhere('telefono_cliente', 'like', "%{$buscar}%");
+                });
+            })
+            ->when($fechaDesde, fn ($query) => $query->whereDate('created_at', '>=', $fechaDesde))
+            ->when($fechaHasta, fn ($query) => $query->whereDate('created_at', '<=', $fechaHasta));
+
+        $statsBase = clone $query;
+
+        $stats = [
+            'total_pedidos' => (clone $statsBase)->count(),
+            'monto_visible' => (float) (clone $statsBase)->sum('total'),
+            'pendientes' => (clone $statsBase)->where('estatus', 'pendiente')->count(),
+            'en_operacion' => (clone $statsBase)->whereIn('estatus', ['pagado', 'preparando', 'enviado'])->count(),
+            'entregados' => (clone $statsBase)->where('estatus', 'entregado')->count(),
+        ];
+
+        $pedidos = $query
             ->latest()
             ->paginate(12)
             ->through(function (Pedido $pedido) {
@@ -30,19 +87,56 @@ class PedidoController extends Controller {
                     'total' => (float) $pedido->total,
                     'nombre_cliente' => $pedido->nombre_cliente,
                     'correo_cliente' => $pedido->correo_cliente,
-                    'items' => $pedido->items->map(fn ($item) => [
-                        'id' => $item->id,
-                        'cantidad' => (int) $item->cantidad,
-                    ])->values(),
+                    'telefono_cliente' => $pedido->telefono_cliente,
+                    'paqueteria' => $pedido->paqueteria,
+                    'numero_guia' => $pedido->numero_guia,
+                    'comentario_interno' => $pedido->comentario_interno,
                     'created_at' => $pedido->created_at?->toDateTimeString(),
+                    'items' => $pedido->items->map(function ($item) {
+                        return [
+                            'id' => $item->id,
+                            'producto_id' => $item->producto_id,
+                            'nombre' => $item->nombre,
+                            'sku' => $item->sku,
+                            'cantidad' => (int) $item->cantidad,
+                            'precio_unitario' => (float) $item->precio_unitario,
+                            'subtotal' => (float) $item->subtotal,
+                            'imagen_url' => $this->productoImagenUrl($item->producto),
+                        ];
+                    })->values(),
+                    'pagos' => $pedido->pagos->map(fn ($pago) => [
+                        'id' => $pago->id,
+                        'estatus' => $pago->estatus,
+                        'monto' => (float) $pago->monto,
+                        'referencia_externa' => $pago->referencia_externa,
+                        'autorizacion' => $pago->autorizacion,
+                        'pagado_en' => $pago->pagado_en?->toDateTimeString(),
+                        'metodo_pago' => $pago->metodoPago ? [
+                            'nombre' => $pago->metodoPago->nombre,
+                            'clave' => $pago->metodoPago->clave,
+                        ] : null,
+                    ])->values(),
                 ];
             })
             ->withQueryString();
+
         return Inertia::render('Admin/Pedidos/Index', [
             'pedidos' => $pedidos,
+            'stats' => $stats,
             'estatusDisponibles' => self::ESTATUS,
+            'pagosDisponibles' => [
+                'pendiente',
+                'procesando',
+                'aprobado',
+                'rechazado',
+                'error',
+            ],
             'filters' => [
                 'estatus' => $estatus,
+                'pago' => $pago,
+                'buscar' => $buscar,
+                'fecha_desde' => $fechaDesde,
+                'fecha_hasta' => $fechaHasta,
             ],
         ]);
     }
@@ -51,15 +145,18 @@ class PedidoController extends Controller {
         $pedido->load([
             'user:id,name,email',
             'direccion',
-            'items.producto:id,nombre,slug',
+            'items.producto:id,nombre,slug,imagen_principal',
+            'items.producto.imagenes:id,producto_id,ruta,principal,orden',
             'pagos.metodoPago:id,nombre,clave',
             'historial.user:id,name',
         ]);
+
         return Inertia::render('Admin/Pedidos/Show', [
             'pedido' => [
                 'id' => $pedido->id,
                 'folio' => $pedido->folio,
                 'estatus' => $pedido->estatus,
+                'estatus_siguientes' => self::TRANSICIONES[$pedido->estatus] ?? [],
                 'moneda' => $pedido->moneda,
                 'subtotal' => (float) $pedido->subtotal,
                 'descuento' => (float) $pedido->descuento,
@@ -109,6 +206,7 @@ class PedidoController extends Controller {
                         'cantidad' => (int) $item->cantidad,
                         'precio_unitario' => (float) $item->precio_unitario,
                         'subtotal' => (float) $item->subtotal,
+                        'imagen_url' => $this->productoImagenUrl($item->producto),
                     ];
                 })->values(),
                 'pagos' => $pedido->pagos->map(function ($pago) {
@@ -156,30 +254,49 @@ class PedidoController extends Controller {
             'numero_guia' => ['nullable', 'string', 'max:180'],
             'comentario_interno' => ['nullable', 'string', 'max:5000'],
         ]);
+
+        $estatusAnterior = $pedido->estatus;
         $nuevoEstatus = $data['estatus'];
-        $pedido->paqueteria = $data['paqueteria'] ?? null;
-        $pedido->numero_guia = $data['numero_guia'] ?? null;
-        $pedido->comentario_interno = $data['comentario_interno'] ?? null;
+
+        $permitidos = self::TRANSICIONES[$pedido->estatus] ?? [];
+
+        if ($pedido->estatus !== $nuevoEstatus && ! in_array($nuevoEstatus, $permitidos, true)) {
+            return back()->with('error', 'No puedes regresar el pedido a un estado anterior.');
+        }
+
+        if ($nuevoEstatus === 'enviado') {
+            if (empty($data['paqueteria']) || empty($data['numero_guia'])) {
+                return back()->with('error', 'Para marcar como enviado debes capturar paquetería y número de guía.');
+            }
+        }
+
+        $pedido->paqueteria = $data['paqueteria'] ?? $pedido->paqueteria;
+        $pedido->numero_guia = $data['numero_guia'] ?? $pedido->numero_guia;
+        $pedido->comentario_interno = $data['comentario_interno'] ?? $pedido->comentario_interno;
+
         if ($pedido->estatus !== $nuevoEstatus) {
             $pedido->estatus = $nuevoEstatus;
+
             if ($nuevoEstatus === 'pagado' && ! $pedido->pagado_en) {
                 $pedido->pagado_en = now();
             }
+
             if ($nuevoEstatus === 'preparando' && ! $pedido->preparando_en) {
                 $pedido->preparando_en = now();
             }
+
             if ($nuevoEstatus === 'enviado' && ! $pedido->enviado_en) {
                 $pedido->enviado_en = now();
             }
+
             if ($nuevoEstatus === 'entregado' && ! $pedido->entregado_en) {
                 $pedido->entregado_en = now();
             }
+
             if ($nuevoEstatus === 'cancelado' && ! $pedido->cancelado_en) {
                 $pedido->cancelado_en = now();
             }
-            if ($nuevoEstatus !== 'cancelado') {
-                $pedido->cancelado_en = null;
-            }
+
             PedidoEstatusHistorial::create([
                 'pedido_id' => $pedido->id,
                 'user_id' => $request->user()?->id,
@@ -187,8 +304,69 @@ class PedidoController extends Controller {
                 'comentario' => $data['comentario'] ?? null,
             ]);
         }
+
         $pedido->save();
+
+        if ($estatusAnterior !== $nuevoEstatus) {
+            $this->enviarCorreoPorEstatus($pedido, $nuevoEstatus);
+        }
+
         return back()->with('success', 'Pedido actualizado correctamente.');
+    }
+
+    private function enviarCorreoPorEstatus(Pedido $pedido, string $estatus): void
+    {
+        if (! $pedido->correo_cliente) {
+            return;
+        }
+
+        if (! in_array($estatus, ['preparando', 'enviado', 'entregado'], true)) {
+            return;
+        }
+
+        try {
+            Mail::to($pedido->correo_cliente)->send(
+                new PedidoEstadoMail($pedido->fresh(['items', 'direccion', 'pagos.metodoPago']), $estatus)
+            );
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
+    }
+
+    private function productoImagenUrl($producto): ?string {
+        if (! $producto) {
+            return null;
+        }
+
+        $ruta = $producto->imagenes
+            ?->sortBy([
+                ['principal', 'desc'],
+                ['orden', 'asc'],
+                ['id', 'asc'],
+            ])
+            ->pluck('ruta')
+            ->filter()
+            ->first();
+
+        $ruta = $ruta ?: $producto->imagen_principal;
+
+        if (! $ruta) {
+            return null;
+        }
+
+        if (str_starts_with($ruta, 'http://') || str_starts_with($ruta, 'https://')) {
+            return $ruta;
+        }
+
+        if (str_starts_with($ruta, '/storage/')) {
+            return $ruta;
+        }
+
+        if (str_starts_with($ruta, 'storage/')) {
+            return '/'.$ruta;
+        }
+
+        return Storage::url($ruta);
     }
 
 }

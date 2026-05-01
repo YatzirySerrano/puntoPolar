@@ -9,6 +9,8 @@ use App\Models\TransaccionPasarela;
 use App\Services\Payments\Data\PaymentChargeData;
 use App\Services\Payments\Data\PaymentResultData;
 use Illuminate\Support\Facades\DB;
+use App\Mail\PedidoEstadoMail;
+use Illuminate\Support\Facades\Mail;
 
 class PaymentService {
 
@@ -75,6 +77,14 @@ class PaymentService {
                     'estatus' => 'pagado',
                     'comentario' => 'Pago aprobado por '.$gateway->name().'.',
                 ]);
+
+                if ($pedido->correo_cliente) {
+                    try {
+                        Mail::to($pedido->correo_cliente)->send(new PedidoEstadoMail($pedido->fresh(['items', 'direccion', 'pagos.metodoPago']), 'pagado'));
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                    }
+                }
             }
         });
 

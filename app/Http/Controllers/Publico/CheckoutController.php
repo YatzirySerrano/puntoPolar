@@ -192,7 +192,10 @@ class CheckoutController extends Controller {
     }
 
     public function gracias(Pedido $pedido): Response {
-        abort_unless($pedido->user_id === auth()->id(), 403);
+        abort_unless(
+            $pedido->user_id === auth()->id() || auth()->user()?->isAdmin(),
+            403
+        );
 
         $pedido->load(['items', 'direccion', 'pagos']);
 
@@ -245,7 +248,10 @@ class CheckoutController extends Controller {
 
     public function pagar(Request $request, Pedido $pedido, PaymentService $paymentService): RedirectResponse
     {
-        abort_unless($pedido->user_id === auth()->id(), 403);
+        abort_unless(
+            $pedido->user_id === auth()->id() || auth()->user()?->isAdmin(),
+            403
+        );
 
         $data = $request->validate([
             'token_id' => ['required', 'string', 'max:255'],
