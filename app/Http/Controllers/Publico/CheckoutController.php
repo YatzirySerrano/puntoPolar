@@ -3,29 +3,32 @@
 namespace App\Http\Controllers\Publico;
 
 use App\Http\Controllers\Controller;
+use App\Models\Configuracion;
 use App\Models\Cupon;
 use App\Models\Direccion;
+use App\Models\MetodoPago;
 use App\Models\Oferta;
+use App\Models\Pago;
 use App\Models\Pedido;
 use App\Models\PedidoEstatusHistorial;
 use App\Models\PedidoItem;
 use App\Models\Producto;
+use App\Services\Payments\Data\PaymentChargeData;
+use App\Services\Payments\PaymentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use App\Models\MetodoPago;
-use App\Models\Pago;
-use App\Services\Payments\Data\PaymentChargeData;
-use App\Services\Payments\PaymentService;
 
-class CheckoutController extends Controller {
-
-    public function index(Request $request): Response|RedirectResponse {
+class CheckoutController extends Controller
+{
+    public function index(Request $request): Response|RedirectResponse
+    {
         $carrito = collect(session()->get('carrito', []));
 
         if ($carrito->isEmpty()) {
@@ -34,7 +37,8 @@ class CheckoutController extends Controller {
                 ->with('error', 'Tu carrito está vacío.');
         }
 
-        $checkout = $this->buildCheckoutData($carrito);
+        $tipoEntregaDefault = $this->resolveTipoEntregaDefault();
+        $checkout = $this->buildCheckoutData($carrito, $tipoEntregaDefault);
 
         if ($checkout['items']->isEmpty()) {
             session()->forget('carrito');
@@ -77,11 +81,29 @@ class CheckoutController extends Controller {
                 'nombre' => $user->name,
                 'correo' => $user->email,
             ],
+            'configuracionEntrega' => $this->getConfiguracionEntrega(),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse {
+    public function store(Request $request): RedirectResponse
+    {
         $user = $request->user();
+
+        $tipoEntrega = $request->input('tipo_entrega') ?: $this->resolveTipoEntregaDefault();
+
+        if (! in_array($tipoEntrega, ['recoleccion', 'entrega_local'], true)) {
+            $tipoEntrega = 'recoleccion';
+        }
+
+        $usarDireccionExistente = filter_var(
+            $request->input('usar_direccion_existente', false),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        $request->merge([
+            'tipo_entrega' => $tipoEntrega,
+            'usar_direccion_existente' => $usarDireccionExistente,
+        ]);
 
         $data = $request->validate([
             'nombre_cliente' => ['required', 'string', 'max:180'],
@@ -89,22 +111,79 @@ class CheckoutController extends Controller {
             'telefono_cliente' => ['required', 'string', 'max:30'],
             'notas_cliente' => ['nullable', 'string', 'max:1000'],
 
-            'usar_direccion_existente' => ['required', 'boolean'],
-            'direccion_id' => ['nullable', 'integer', 'exists:direcciones,id'],
+            'tipo_entrega' => ['required', 'string', 'in:recoleccion,entrega_local'],
+
+            'usar_direccion_existente' => ['nullable', 'boolean'],
+            'direccion_id' => [
+                Rule::requiredIf($tipoEntrega === 'entrega_local' && $usarDireccionExistente),
+                'nullable',
+                'integer',
+                'exists:direcciones,id',
+            ],
 
             'alias' => ['nullable', 'string', 'max:80'],
-            'nombre_receptor' => ['required_if:usar_direccion_existente,false', 'nullable', 'string', 'max:180'],
-            'telefono' => ['required_if:usar_direccion_existente,false', 'nullable', 'string', 'max:30'],
-            'calle' => ['required_if:usar_direccion_existente,false', 'nullable', 'string', 'max:180'],
-            'numero_exterior' => ['required_if:usar_direccion_existente,false', 'nullable', 'string', 'max:50'],
+            'nombre_receptor' => [
+                Rule::requiredIf($tipoEntrega === 'entrega_local' && ! $usarDireccionExistente),
+                'nullable',
+                'string',
+                'max:180',
+            ],
+            'telefono' => [
+                Rule::requiredIf($tipoEntrega === 'entrega_local' && ! $usarDireccionExistente),
+                'nullable',
+                'string',
+                'max:30',
+            ],
+            'calle' => [
+                Rule::requiredIf($tipoEntrega === 'entrega_local' && ! $usarDireccionExistente),
+                'nullable',
+                'string',
+                'max:180',
+            ],
+            'numero_exterior' => ['nullable', 'string', 'max:50'],
             'numero_interior' => ['nullable', 'string', 'max:50'],
-            'colonia' => ['required_if:usar_direccion_existente,false', 'nullable', 'string', 'max:120'],
-            'municipio' => ['required_if:usar_direccion_existente,false', 'nullable', 'string', 'max:120'],
-            'estado' => ['required_if:usar_direccion_existente,false', 'nullable', 'string', 'max:120'],
+            'colonia' => [
+                Rule::requiredIf($tipoEntrega === 'entrega_local' && ! $usarDireccionExistente),
+                'nullable',
+                'string',
+                'max:120',
+            ],
+            'municipio' => [
+                Rule::requiredIf($tipoEntrega === 'entrega_local' && ! $usarDireccionExistente),
+                'nullable',
+                'string',
+                'max:120',
+            ],
+            'estado' => [
+                Rule::requiredIf($tipoEntrega === 'entrega_local' && ! $usarDireccionExistente),
+                'nullable',
+                'string',
+                'max:120',
+            ],
             'pais' => ['nullable', 'string', 'max:120'],
-            'codigo_postal' => ['required_if:usar_direccion_existente,false', 'nullable', 'string', 'max:15'],
+            'codigo_postal' => [
+                Rule::requiredIf($tipoEntrega === 'entrega_local' && ! $usarDireccionExistente),
+                'nullable',
+                'string',
+                'max:15',
+            ],
             'referencias' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        if ($tipoEntrega === 'recoleccion' && ! $this->configBool('recoleccion_activa', true)) {
+            return back()->with('error', 'La recolección no está disponible por el momento.');
+        }
+
+        if ($tipoEntrega === 'entrega_local' && ! $this->configBool('entrega_local_activa', false)) {
+            return back()->with('error', 'La entrega local no está disponible por el momento.');
+        }
+
+        if (
+            ! $this->configBool('recoleccion_activa', true) &&
+            ! $this->configBool('entrega_local_activa', false)
+        ) {
+            return back()->with('error', 'Por el momento no hay métodos de entrega disponibles.');
+        }
 
         $carrito = collect(session()->get('carrito', []));
 
@@ -114,7 +193,7 @@ class CheckoutController extends Controller {
                 ->with('error', 'Tu carrito está vacío.');
         }
 
-        $checkout = $this->buildCheckoutData($carrito);
+        $checkout = $this->buildCheckoutData($carrito, $tipoEntrega);
 
         if ($checkout['items']->isEmpty()) {
             session()->forget('carrito');
@@ -124,14 +203,18 @@ class CheckoutController extends Controller {
                 ->with('error', 'Los productos del carrito ya no están disponibles.');
         }
 
-        $pedido = DB::transaction(function () use ($request, $user, $data, $checkout) {
-            $direccion = $this->resolveDireccion($user->id, $data);
+        $pedido = DB::transaction(function () use ($request, $user, $data, $checkout, $tipoEntrega) {
+            $direccion = $this->resolveDireccion($user->id, $data, $tipoEntrega);
 
             $pedido = Pedido::create([
                 'user_id' => $user->id,
-                'direccion_id' => $direccion->id,
+                'direccion_id' => $direccion?->id,
                 'folio' => $this->generateFolio(),
                 'estatus' => 'pendiente',
+                'tipo_entrega' => $tipoEntrega,
+                'codigo_recoleccion' => $tipoEntrega === 'recoleccion'
+                    ? $this->generateCodigoRecoleccion()
+                    : null,
                 'moneda' => 'MXN',
                 'subtotal' => $checkout['resumen']['subtotal'],
                 'descuento' => $checkout['resumen']['descuento'],
@@ -177,7 +260,9 @@ class CheckoutController extends Controller {
                 'pedido_id' => $pedido->id,
                 'user_id' => $request->user()?->id,
                 'estatus' => 'pendiente',
-                'comentario' => 'Pedido creado desde checkout. Pendiente de pago.',
+                'comentario' => $tipoEntrega === 'recoleccion'
+                    ? 'Pedido creado desde checkout. Pendiente de pago y recolección en Punto Polar.'
+                    : 'Pedido creado desde checkout. Pendiente de pago y entrega local.',
             ]);
 
             return $pedido;
@@ -188,10 +273,11 @@ class CheckoutController extends Controller {
 
         return redirect()
             ->route('checkout.gracias', $pedido)
-            ->with('success', 'Tu pedido fue creado correctamente. El siguiente paso será integrar el pago.');
+            ->with('success', 'Tu pedido fue creado correctamente. Continúa con el pago para confirmar tu compra.');
     }
 
-    public function gracias(Pedido $pedido): Response {
+    public function gracias(Pedido $pedido): Response
+    {
         abort_unless(
             $pedido->user_id === auth()->id() || auth()->user()?->isAdmin(),
             403
@@ -204,6 +290,13 @@ class CheckoutController extends Controller {
                 'id' => $pedido->id,
                 'folio' => $pedido->folio,
                 'estatus' => $pedido->estatus,
+                'tipo_entrega' => $pedido->tipo_entrega,
+                'codigo_recoleccion' => $pedido->codigo_recoleccion,
+                'listo_para_recoger_en' => $pedido->listo_para_recoger_en?->toDateTimeString(),
+                'fecha_entrega_programada' => $pedido->fecha_entrega_programada?->toDateTimeString(),
+                'salio_a_entrega_en' => $pedido->salio_a_entrega_en?->toDateTimeString(),
+                'zona_entrega' => $pedido->zona_entrega,
+                'instrucciones_entrega' => $pedido->instrucciones_entrega,
                 'subtotal' => (float) $pedido->subtotal,
                 'descuento' => (float) $pedido->descuento,
                 'envio' => (float) $pedido->envio,
@@ -243,6 +336,7 @@ class CheckoutController extends Controller {
                 'public_key' => config('payments.gateways.openpay.public_key'),
                 'sandbox' => (bool) config('payments.gateways.openpay.sandbox'),
             ],
+            'configuracionEntrega' => $this->getConfiguracionEntrega(),
         ]);
     }
 
@@ -316,9 +410,14 @@ class CheckoutController extends Controller {
         return back()->with('error', $result->message ?: 'No fue posible procesar el pago.');
     }
 
-    private function resolveDireccion(int $userId, array $data): Direccion {
+    private function resolveDireccion(int $userId, array $data, string $tipoEntrega): ?Direccion
+    {
+        if ($tipoEntrega === 'recoleccion') {
+            return null;
+        }
+
         if (
-            (bool) $data['usar_direccion_existente'] === true &&
+            (bool) ($data['usar_direccion_existente'] ?? false) === true &&
             ! empty($data['direccion_id'])
         ) {
             return Direccion::query()
@@ -329,11 +428,11 @@ class CheckoutController extends Controller {
 
         return Direccion::create([
             'user_id' => $userId,
-            'alias' => $data['alias'] ?: 'Dirección de envío',
+            'alias' => $data['alias'] ?: 'Dirección de entrega',
             'nombre_receptor' => $data['nombre_receptor'],
             'telefono' => $data['telefono'],
             'calle' => $data['calle'],
-            'numero_exterior' => $data['numero_exterior'],
+            'numero_exterior' => $data['numero_exterior'] ?? null,
             'numero_interior' => $data['numero_interior'] ?? null,
             'colonia' => $data['colonia'],
             'municipio' => $data['municipio'],
@@ -345,7 +444,8 @@ class CheckoutController extends Controller {
         ]);
     }
 
-    private function buildCheckoutData(Collection $carrito): array {
+    private function buildCheckoutData(Collection $carrito, string $tipoEntrega = 'recoleccion'): array
+    {
         $productoIds = $carrito
             ->pluck('producto_id')
             ->filter()
@@ -412,7 +512,7 @@ class CheckoutController extends Controller {
 
         $subtotal = round((float) $items->sum('subtotal'), 2);
         $descuentoOfertas = round((float) $items->sum('descuento_oferta'), 2);
-        $envio = 0.0;
+        $envio = $this->resolveEnvio($tipoEntrega, $subtotal);
 
         $cuponSession = session('carrito_cupon');
         $cuponAplicado = null;
@@ -451,19 +551,118 @@ class CheckoutController extends Controller {
                 'descuento_cupon' => round($descuentoCupon, 2),
                 'total' => round($total, 2),
                 'total_productos' => (int) $items->sum('cantidad'),
+                'tipo_entrega' => $tipoEntrega,
             ],
         ];
     }
 
-    private function generateFolio(): string {
+    private function generateFolio(): string
+    {
         do {
-            $folio = 'ML-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
+            $folio = 'PP-'.now()->format('Ymd').'-'.Str::upper(Str::random(6));
         } while (Pedido::query()->where('folio', $folio)->exists());
 
         return $folio;
     }
 
-    private function resolveProductoPricing(Producto $producto): array {
+    private function generateCodigoRecoleccion(): string
+    {
+        do {
+            $codigo = 'PP-'.now()->format('md').'-'.Str::upper(Str::random(4));
+        } while (Pedido::query()->where('codigo_recoleccion', $codigo)->exists());
+
+        return $codigo;
+    }
+
+    private function resolveEnvio(string $tipoEntrega, float $subtotal): float
+    {
+        if ($tipoEntrega !== 'entrega_local') {
+            return 0.0;
+        }
+
+        $costoBase = $this->configFloat('entrega_local_costo_base', 0);
+        $montoMinimo = $this->configFloat('entrega_local_monto_minimo', 0);
+
+        if ($montoMinimo > 0 && $subtotal >= $montoMinimo) {
+            return 0.0;
+        }
+
+        return max(0, $costoBase);
+    }
+
+    private function resolveTipoEntregaDefault(): string
+    {
+        $default = (string) $this->configValue('tipo_entrega_default', 'recoleccion');
+
+        if (! in_array($default, ['recoleccion', 'entrega_local'], true)) {
+            $default = 'recoleccion';
+        }
+
+        if ($default === 'recoleccion' && $this->configBool('recoleccion_activa', true)) {
+            return 'recoleccion';
+        }
+
+        if ($default === 'entrega_local' && $this->configBool('entrega_local_activa', false)) {
+            return 'entrega_local';
+        }
+
+        if ($this->configBool('recoleccion_activa', true)) {
+            return 'recoleccion';
+        }
+
+        if ($this->configBool('entrega_local_activa', false)) {
+            return 'entrega_local';
+        }
+
+        return 'recoleccion';
+    }
+
+    private function getConfiguracionEntrega(): array
+    {
+        return [
+            'recoleccion_activa' => $this->configBool('recoleccion_activa', true),
+            'entrega_local_activa' => $this->configBool('entrega_local_activa', false),
+            'tipo_entrega_default' => $this->resolveTipoEntregaDefault(),
+            'entrega_local_costo_base' => $this->configFloat('entrega_local_costo_base', 0),
+            'entrega_local_monto_minimo' => $this->configFloat('entrega_local_monto_minimo', 0),
+            'recoleccion_direccion' => $this->configValue('recoleccion_direccion', null),
+            'mensaje_pago_anticipado' => $this->configValue('mensaje_pago_anticipado', null),
+        ];
+    }
+
+    private function configValue(string $clave, mixed $default = null): mixed
+    {
+        $valor = Configuracion::query()
+            ->where('clave', $clave)
+            ->value('valor');
+
+        return $valor !== null ? $valor : $default;
+    }
+
+    private function configBool(string $clave, bool $default = false): bool
+    {
+        $valor = $this->configValue($clave);
+
+        if ($valor === null) {
+            return $default;
+        }
+
+        return filter_var($valor, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function configFloat(string $clave, float $default = 0.0): float
+    {
+        $valor = $this->configValue($clave);
+
+        if ($valor === null || $valor === '') {
+            return $default;
+        }
+
+        return (float) $valor;
+    }
+
+    private function resolveProductoPricing(Producto $producto): array
+    {
         $precioOriginal = round((float) $producto->precio, 2);
         $oferta = $this->resolveOfertaForProducto($producto);
 
@@ -519,7 +718,8 @@ class CheckoutController extends Controller {
         ];
     }
 
-    private function resolveOfertaForProducto(Producto $producto): ?Oferta {
+    private function resolveOfertaForProducto(Producto $producto): ?Oferta
+    {
         $now = now();
 
         $ofertasProducto = $producto->ofertas
@@ -596,7 +796,8 @@ class CheckoutController extends Controller {
         return 0;
     }
 
-    private function calculateCuponDiscount(float $subtotal, Cupon $cupon): float {
+    private function calculateCuponDiscount(float $subtotal, Cupon $cupon): float
+    {
         $tipo = trim(mb_strtolower((string) $cupon->tipo));
         $tipo = str_replace(
             ['á', 'é', 'í', 'ó', 'ú', ' '],
@@ -615,7 +816,8 @@ class CheckoutController extends Controller {
         return round(min($subtotal, max(0, $discount)), 2);
     }
 
-    private function isOfertaActiva(Oferta $oferta, $now): bool {
+    private function isOfertaActiva(Oferta $oferta, $now): bool
+    {
         if (! $oferta->activa) {
             return false;
         }
@@ -631,7 +833,8 @@ class CheckoutController extends Controller {
         return true;
     }
 
-    private function resolveProductoImage(Producto $producto): ?string {
+    private function resolveProductoImage(Producto $producto): ?string
+    {
         $primeraImagen = $producto->imagenes
             ->sortBy([
                 ['orden', 'asc'],
@@ -644,7 +847,8 @@ class CheckoutController extends Controller {
         return $this->resolveImageUrl($primeraImagen ?: $producto->imagen_principal);
     }
 
-    private function resolveImageUrl(?string $path): ?string {
+    private function resolveImageUrl(?string $path): ?string
+    {
         if (! $path) {
             return null;
         }
@@ -672,5 +876,4 @@ class CheckoutController extends Controller {
 
         return Storage::url($path);
     }
-
 }
