@@ -280,7 +280,7 @@ function addToCart(producto: Producto) {
               </h1>
 
               <p class="mt-3 text-sm leading-7 text-neutral-600 md:text-base">
-                Explora por categoría, marca y rango de precio. Compara opciones, revisa promociones y agrega al carrito en segundos.
+                Explora por categoría y rango de precio. Compara opciones, revisa promociones y agrega al carrito en segundos.
               </p>
             </div>
 
@@ -316,7 +316,7 @@ function addToCart(producto: Producto) {
                   <input
                     v-model="searchText"
                     type="text"
-                    placeholder="Nombre, SKU, marca..."
+                    placeholder="Nombre o SKU..."
                     class="w-full bg-transparent text-sm text-neutral-700 outline-none placeholder:text-neutral-400"
                   />
                 </div>
@@ -377,7 +377,7 @@ function addToCart(producto: Producto) {
                 </div>
               </div>
 
-              <div class="rounded-[30px] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(17,20,44,0.06)] transition-all duration-300 hover:shadow-[0_24px_55px_rgba(17,20,44,0.08)]">
+              <!--<div class="rounded-[30px] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(17,20,44,0.06)] transition-all duration-300 hover:shadow-[0_24px_55px_rgba(17,20,44,0.08)]">
                 <div class="mb-4 flex items-center justify-between gap-3">
                   <h3 class="text-lg font-black text-neutral-900">
                     Marcas
@@ -414,7 +414,7 @@ function addToCart(producto: Producto) {
                   </button>
                 </div>
               </div>
-
+              -->
               <div class="rounded-[30px] border border-neutral-200 bg-white p-5 shadow-[0_18px_45px_rgba(17,20,44,0.06)] transition-all duration-300 hover:shadow-[0_24px_55px_rgba(17,20,44,0.08)]">
                 <h3 class="text-lg font-black text-neutral-900">
                   Precio
@@ -521,10 +521,9 @@ function addToCart(producto: Producto) {
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                  <span class="inline-flex items-center rounded-full bg-[var(--brand-green)]/12 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[var(--brand-green)]">
+                  <span class="inline-flex items-center rounded-full bg-[linear-gradient(135deg,#30BEEF_0%,#0B5FA5_100%)] px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(48,190,239,0.22)]">
                     {{ resumenCatalogo.conOferta }} con promoción
                   </span>
-
                   <button
                     type="button"
                     class="inline-flex items-center justify-center rounded-full border border-neutral-200 bg-white px-5 py-3 text-sm font-black text-[#11142C] transition hover:border-[var(--brand-blue)] hover:bg-[var(--brand-blue)]/8 hover:text-[var(--brand-blue)]"
@@ -583,7 +582,7 @@ function addToCart(producto: Producto) {
 
                         <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-neutral-500">
                             <span>SKU: {{ producto.sku }}</span>
-                            <span v-if="producto.marca?.nombre">• {{ producto.marca.nombre }}</span>
+                            <!--<span v-if="producto.marca?.nombre">• {{ producto.marca.nombre }}</span>-->
                         </div>
 
                         <p class="mt-2 line-clamp-2 text-sm leading-5 text-neutral-500">
@@ -638,7 +637,7 @@ function addToCart(producto: Producto) {
 
                             <button
                               type="button"
-                              class="relative inline-flex h-12 items-center justify-center rounded-full bg-[#11142C] px-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--brand-green)] hover:text-[#11142C] hover:shadow-[0_14px_30px_rgba(125,208,60,0.20)] disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-white"
+                              class="relative inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#30BEEF_0%,#0B5FA5_100%)] px-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--brand-green)] hover:text-[#11142C] hover:shadow-[0_14px_30px_rgba(125,208,60,0.20)] disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-white"
                               :disabled="producto.stock < 1"
                               @click="addToCart(producto)"
                             >
@@ -660,7 +659,7 @@ function addToCart(producto: Producto) {
                     </article>
 
                     <article
-                      class="absolute inset-0 overflow-hidden rounded-[32px] border border-neutral-200 bg-[linear-gradient(180deg,#11142C_0%,#161b3d_100%)] text-white shadow-[0_18px_50px_rgba(17,20,44,0.14)] [transform:rotateY(180deg)] [backface-visibility:hidden]"
+                      class="absolute inset-0 overflow-hidden rounded-[32px] border border-sky-200 bg-[linear-gradient(180deg,#031B3F_0%,#063B78_55%,#0A8DC4_100%)] text-white shadow-[0_18px_50px_rgba(48,190,239,0.18)] [transform:rotateY(180deg)] [backface-visibility:hidden]"
                     >
                       <div class="flex h-full flex-col p-6">
                         <div class="flex items-start justify-between gap-3">
@@ -679,7 +678,7 @@ function addToCart(producto: Producto) {
                         </div>
 
                         <div class="mt-6 grid gap-4">
-                          <div class="rounded-[24px] border border-white/10 bg-white/5 p-4">
+                          <div class="rounded-[24px] border border-white/10 bg-white/10 p-4">
                             <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
                               Precio actual
                             </p>
@@ -695,8 +694,8 @@ function addToCart(producto: Producto) {
                             </p>
                           </div>
 
-                          <div class="grid gap-3 sm:grid-cols-2">
-                            <div class="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                          <div class="grid gap-3 sm:grid-cols-1">
+                            <div class="rounded-[22px] border border-white/10 bg-white/10 p-4">
                               <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
                                 Categoría
                               </p>
@@ -705,17 +704,17 @@ function addToCart(producto: Producto) {
                               </p>
                             </div>
 
-                            <div class="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                            <!--<div class="rounded-[22px] border border-white/10 bg-white/5 p-4">
                               <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
                                 Marca
                               </p>
                               <p class="mt-2 text-sm font-semibold">
                                 {{ producto.marca?.nombre || 'Sin marca' }}
                               </p>
-                            </div>
+                            </div>-->
                           </div>
 
-                          <div class="rounded-[22px] border border-white/10 bg-white/5 p-4">
+                          <div class="rounded-[22px] border border-white/10 bg-white/10 p-4">
                             <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-white/45">
                               Descripción
                             </p>
@@ -743,14 +742,14 @@ function addToCart(producto: Producto) {
                         <div class="mt-auto grid grid-cols-2 gap-3 pt-6">
                           <Link
                             :href="`/productos/${producto.slug}`"
-                            class="inline-flex h-12 items-center justify-center rounded-full border border-white/20 bg-white/10 px-4 text-sm font-black text-white transition-all duration-300 hover:bg-white hover:text-[#11142C]"
+                            class="inline-flex h-12 items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-[#062A5E]"
                           >
                             Ver detalle
                           </Link>
 
                           <button
                             type="button"
-                            class="inline-flex h-12 items-center justify-center rounded-full bg-[var(--brand-green)] px-4 text-sm font-black text-[#11142C] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(125,208,60,0.28)] disabled:cursor-not-allowed disabled:bg-neutral-500 disabled:text-white"
+                            class="relative inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffffff_0%,#dff7ff_100%)] px-4 text-sm font-black text-[#062A5E] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#30BEEF_0%,#ffffff_100%)] hover:text-[#062A5E] hover:shadow-[0_14px_30px_rgba(255,255,255,0.20)] disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
                             :disabled="producto.stock < 1"
                             @click="addToCart(producto)"
                           >

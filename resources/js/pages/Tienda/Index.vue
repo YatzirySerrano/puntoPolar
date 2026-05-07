@@ -410,7 +410,7 @@ function addToCart(producto: Producto) {
         </div>
       </section>
 
-      <section id="marcas-destacadas" class="px-4 py-14 md:px-8">
+      <!--<section id="marcas-destacadas" class="px-4 py-14 md:px-8">
         <div class="mx-auto w-full max-w-[1500px]">
           <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
@@ -487,7 +487,7 @@ function addToCart(producto: Producto) {
           </div>
         </div>
       </section>
-
+      -->
       <section id="productos-destacados" class="bg-[var(--brand-soft)] px-4 py-14 md:px-8">
         <div class="mx-auto w-full max-w-[1500px]">
           <div class="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
