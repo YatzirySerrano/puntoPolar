@@ -56,6 +56,8 @@ interface PedidoDetail {
     folio: string;
     estatus: string;
     estatus_siguientes: string[];
+    tipo_entrega?: 'recoleccion' | 'entrega_local' | null;
+    codigo_recoleccion?: string | null;
     moneda?: string | null;
     subtotal: number;
     descuento: number;
@@ -66,11 +68,13 @@ interface PedidoDetail {
     correo_cliente?: string | null;
     telefono_cliente?: string | null;
     notas_cliente?: string | null;
-    paqueteria?: string | null;
-    numero_guia?: string | null;
     comentario_interno?: string | null;
     preparando_en?: string | null;
-    enviado_en?: string | null;
+    listo_para_recoger_en?: string | null;
+    fecha_entrega_programada?: string | null;
+    salio_a_entrega_en?: string | null;
+    zona_entrega?: string | null;
+    instrucciones_entrega?: string | null;
     entregado_en?: string | null;
     pagado_en?: string | null;
     cancelado_en?: string | null;
@@ -96,15 +100,24 @@ const page = usePage<{
 
 const { formatCurrency } = useCurrency();
 
-const editandoEnvio = ref(false);
+const editandoEntrega = ref(false);
 const comentarioVisible = ref(false);
+
+const esRecoleccion = computed(() => {
+    return (props.pedido.tipo_entrega ?? 'recoleccion') === 'recoleccion';
+});
+
+const metodoEntregaLabel = computed(() => {
+    return esRecoleccion.value ? 'Recolección en Punto Polar' : 'Entrega local';
+});
 
 const form = useForm({
     estatus: props.pedido.estatus,
     comentario: '',
-    paqueteria: props.pedido.paqueteria || '',
-    numero_guia: props.pedido.numero_guia || '',
     comentario_interno: props.pedido.comentario_interno || '',
+    fecha_entrega_programada: props.pedido.fecha_entrega_programada || '',
+    zona_entrega: props.pedido.zona_entrega || '',
+    instrucciones_entrega: props.pedido.instrucciones_entrega || '',
 });
 
 const pagoMasReciente = computed(() => {
@@ -135,22 +148,35 @@ const totalPiezas = computed(() =>
     ),
 );
 
-const timelineSteps = [
-    'pendiente',
-    'pagado',
-    'preparando',
-    'enviado',
-    'entregado',
-];
+const timelineSteps = computed(() => {
+    if (esRecoleccion.value) {
+        return [
+            'pendiente',
+            'pagado',
+            'preparando',
+            'listo_para_recoger',
+            'entregado',
+        ];
+    }
+
+    return [
+        'pendiente',
+        'pagado',
+        'preparando',
+        'salio_a_entrega',
+        'entregado',
+    ];
+});
 
 const progresoPedido = computed(() => {
-    const index = timelineSteps.indexOf(props.pedido.estatus);
-
     if (props.pedido.estatus === 'cancelado') return 0;
     if (props.pedido.estatus === 'reembolsado') return 100;
+
+    const index = timelineSteps.value.indexOf(props.pedido.estatus);
+
     if (index < 0) return 0;
 
-    return Math.round((index / (timelineSteps.length - 1)) * 100);
+    return Math.round((index / (timelineSteps.value.length - 1)) * 100);
 });
 
 const estatusLabel = (estatus: string) => {
@@ -158,7 +184,8 @@ const estatusLabel = (estatus: string) => {
         pendiente: 'Pendiente',
         pagado: 'Pagado',
         preparando: 'Preparando',
-        enviado: 'Enviado',
+        listo_para_recoger: 'Listo para recoger',
+        salio_a_entrega: 'Salió a entrega',
         entregado: 'Entregado',
         cancelado: 'Cancelado',
         reembolsado: 'Reembolsado',
@@ -176,7 +203,8 @@ const estatusClasses = (estatus: string) => {
         pendiente: 'border-amber-200 bg-amber-50 text-amber-700',
         pagado: 'border-emerald-200 bg-emerald-50 text-emerald-700',
         preparando: 'border-sky-200 bg-sky-50 text-sky-700',
-        enviado: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+        listo_para_recoger: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+        salio_a_entrega: 'border-indigo-200 bg-indigo-50 text-indigo-700',
         entregado: 'border-lime-200 bg-lime-50 text-lime-700',
         cancelado: 'border-red-200 bg-red-50 text-red-700',
         reembolsado: 'border-purple-200 bg-purple-50 text-purple-700',
@@ -242,37 +270,34 @@ const copiarLigaPago = async () => {
 const prepararCambioEstado = (estatus: string) => {
     form.estatus = estatus;
     form.comentario = '';
-    form.paqueteria = props.pedido.paqueteria || form.paqueteria;
-    form.numero_guia = props.pedido.numero_guia || form.numero_guia;
     form.comentario_interno =
         props.pedido.comentario_interno || form.comentario_interno;
+    form.fecha_entrega_programada =
+        props.pedido.fecha_entrega_programada || form.fecha_entrega_programada;
+    form.zona_entrega = props.pedido.zona_entrega || form.zona_entrega;
+    form.instrucciones_entrega =
+        props.pedido.instrucciones_entrega || form.instrucciones_entrega;
 
-    if (estatus === 'enviado') {
-        editandoEnvio.value = true;
-        comentarioVisible.value = true;
-        return;
-    }
-
-    guardarCambioEstado();
+    comentarioVisible.value = true;
 };
 
 const guardarCambioEstado = () => {
     form.patch(`/admin/pedidos/${props.pedido.id}/estatus`, {
         preserveScroll: true,
         onSuccess: () => {
-            editandoEnvio.value = false;
             comentarioVisible.value = false;
+            editandoEntrega.value = false;
         },
     });
 };
 
-const guardarSoloEnvio = () => {
+const guardarDatosEntrega = () => {
     form.estatus = props.pedido.estatus;
 
     form.patch(`/admin/pedidos/${props.pedido.id}/estatus`, {
         preserveScroll: true,
         onSuccess: () => {
-            editandoEnvio.value = false;
+            editandoEntrega.value = false;
         },
     });
 };
@@ -359,11 +384,9 @@ watch(() => page.props.flash, mostrarFlash, { deep: true });
                         </p>
                     </div>
 
-                    <div
-                        class="h-3 overflow-hidden rounded-full bg-neutral-100"
-                    >
+                    <div class="h-3 overflow-hidden rounded-full bg-neutral-100">
                         <div
-                            class="h-full rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 transition-all duration-700"
+                            class="h-full rounded-full bg-gradient-to-r from-[#30BEEF] to-[#062A5E] transition-all duration-700"
                             :style="{ width: `${progresoPedido}%` }"
                         />
                     </div>
@@ -444,12 +467,12 @@ watch(() => page.props.flash, mostrarFlash, { deep: true });
                             <p
                                 class="text-xs font-black tracking-[0.12em] text-neutral-400 uppercase"
                             >
-                                Envío
+                                Entrega
                             </p>
                             <p
                                 class="mt-2 text-2xl font-black text-neutral-950"
                             >
-                                {{ pedido.paqueteria || 'Pendiente' }}
+                                {{ metodoEntregaLabel }}
                             </p>
                         </article>
                     </section>
@@ -495,9 +518,7 @@ watch(() => page.props.flash, mostrarFlash, { deep: true });
                                             {{ item.nombre }}
                                         </p>
 
-                                        <p
-                                            class="mt-1 text-sm text-neutral-500"
-                                        >
+                                        <p class="mt-1 text-sm text-neutral-500">
                                             SKU: {{ item.sku || 'N/A' }}
                                         </p>
                                     </div>
@@ -604,52 +625,161 @@ watch(() => page.props.flash, mostrarFlash, { deep: true });
                             class="rounded-[28px] border border-neutral-200 bg-white p-5 shadow-sm sm:p-6"
                         >
                             <h2 class="text-xl font-black text-neutral-950">
-                                Dirección
+                                Método de entrega
                             </h2>
 
                             <div class="mt-5 space-y-3 text-sm">
                                 <p>
                                     <span class="font-black text-neutral-500">
-                                        Receptor:
+                                        Tipo:
                                     </span>
                                     <span
                                         class="ml-2 font-semibold text-neutral-950"
                                     >
-                                        {{
-                                            pedido.direccion?.nombre_receptor ||
-                                            'N/A'
-                                        }}
+                                        {{ metodoEntregaLabel }}
                                     </span>
                                 </p>
 
-                                <p>
-                                    <span class="font-black text-neutral-500">
-                                        Teléfono:
-                                    </span>
-                                    <span
-                                        class="ml-2 font-semibold text-neutral-950"
+                                <template v-if="esRecoleccion">
+                                    <p>
+                                        <span
+                                            class="font-black text-neutral-500"
+                                        >
+                                            Código:
+                                        </span>
+                                        <span
+                                            class="ml-2 font-semibold text-neutral-950"
+                                        >
+                                            {{
+                                                pedido.codigo_recoleccion ||
+                                                'Pendiente'
+                                            }}
+                                        </span>
+                                    </p>
+
+                                    <p>
+                                        <span
+                                            class="font-black text-neutral-500"
+                                        >
+                                            Listo para recoger:
+                                        </span>
+                                        <span
+                                            class="ml-2 font-semibold text-neutral-950"
+                                        >
+                                            {{
+                                                formatDate(
+                                                    pedido.listo_para_recoger_en,
+                                                )
+                                            }}
+                                        </span>
+                                    </p>
+                                </template>
+
+                                <template v-else>
+                                    <p>
+                                        <span
+                                            class="font-black text-neutral-500"
+                                        >
+                                            Programada:
+                                        </span>
+                                        <span
+                                            class="ml-2 font-semibold text-neutral-950"
+                                        >
+                                            {{
+                                                formatDate(
+                                                    pedido.fecha_entrega_programada,
+                                                )
+                                            }}
+                                        </span>
+                                    </p>
+
+                                    <p>
+                                        <span
+                                            class="font-black text-neutral-500"
+                                        >
+                                            Salió a entrega:
+                                        </span>
+                                        <span
+                                            class="ml-2 font-semibold text-neutral-950"
+                                        >
+                                            {{
+                                                formatDate(
+                                                    pedido.salio_a_entrega_en,
+                                                )
+                                            }}
+                                        </span>
+                                    </p>
+
+                                    <p v-if="pedido.zona_entrega">
+                                        <span
+                                            class="font-black text-neutral-500"
+                                        >
+                                            Zona:
+                                        </span>
+                                        <span
+                                            class="ml-2 font-semibold text-neutral-950"
+                                        >
+                                            {{ pedido.zona_entrega }}
+                                        </span>
+                                    </p>
+
+                                    <p
+                                        v-if="pedido.instrucciones_entrega"
+                                        class="rounded-2xl border border-sky-200 bg-sky-50 p-3 text-sky-900"
                                     >
-                                        {{
-                                            pedido.direccion?.telefono || 'N/A'
-                                        }}
-                                    </span>
-                                </p>
-
-                                <p
-                                    class="leading-6 font-semibold text-neutral-950"
-                                >
-                                    {{ direccionCompleta(pedido.direccion) }}
-                                </p>
-
-                                <p
-                                    v-if="pedido.direccion?.referencias"
-                                    class="text-neutral-600"
-                                >
-                                    <strong>Referencias:</strong>
-                                    {{ pedido.direccion.referencias }}
-                                </p>
+                                        {{ pedido.instrucciones_entrega }}
+                                    </p>
+                                </template>
                             </div>
                         </article>
+                    </section>
+
+                    <section
+                        v-if="!esRecoleccion"
+                        class="rounded-[28px] border border-neutral-200 bg-white p-5 shadow-sm sm:p-6"
+                    >
+                        <h2 class="text-xl font-black text-neutral-950">
+                            Dirección de entrega
+                        </h2>
+
+                        <div class="mt-5 space-y-3 text-sm">
+                            <p>
+                                <span class="font-black text-neutral-500">
+                                    Receptor:
+                                </span>
+                                <span
+                                    class="ml-2 font-semibold text-neutral-950"
+                                >
+                                    {{
+                                        pedido.direccion?.nombre_receptor ||
+                                        'N/A'
+                                    }}
+                                </span>
+                            </p>
+
+                            <p>
+                                <span class="font-black text-neutral-500">
+                                    Teléfono:
+                                </span>
+                                <span
+                                    class="ml-2 font-semibold text-neutral-950"
+                                >
+                                    {{ pedido.direccion?.telefono || 'N/A' }}
+                                </span>
+                            </p>
+
+                            <p class="leading-6 font-semibold text-neutral-950">
+                                {{ direccionCompleta(pedido.direccion) }}
+                            </p>
+
+                            <p
+                                v-if="pedido.direccion?.referencias"
+                                class="text-neutral-600"
+                            >
+                                <strong>Referencias:</strong>
+                                {{ pedido.direccion.referencias }}
+                            </p>
+                        </div>
                     </section>
                 </div>
 
@@ -662,7 +792,8 @@ watch(() => page.props.flash, mostrarFlash, { deep: true });
                         </h2>
 
                         <p class="mt-1 text-sm text-neutral-500">
-                            Solo se permite avanzar en el flujo.
+                            Solo se permite avanzar en el flujo correspondiente
+                            al método de entrega.
                         </p>
 
                         <div class="mt-5 space-y-3">
@@ -696,20 +827,20 @@ watch(() => page.props.flash, mostrarFlash, { deep: true });
                                     <p
                                         class="text-xs font-black tracking-[0.12em] text-neutral-400 uppercase"
                                     >
-                                        Datos de envío
+                                        Datos operativos
                                     </p>
                                     <p
                                         class="mt-2 text-sm font-black text-neutral-950"
                                     >
-                                        {{
-                                            pedido.paqueteria ||
-                                            'Sin paquetería'
-                                        }}
+                                        {{ metodoEntregaLabel }}
                                     </p>
                                     <p class="text-xs text-neutral-500">
                                         {{
-                                            pedido.numero_guia ||
-                                            'Sin guía registrada'
+                                            esRecoleccion
+                                                ? pedido.codigo_recoleccion ||
+                                                  'Código pendiente'
+                                                : pedido.zona_entrega ||
+                                                  'Zona sin registrar'
                                         }}
                                     </p>
                                 </div>
@@ -717,34 +848,63 @@ watch(() => page.props.flash, mostrarFlash, { deep: true });
                                 <button
                                     type="button"
                                     class="rounded-full border border-neutral-200 bg-white px-3 py-2 text-xs font-black text-neutral-700 transition hover:bg-neutral-100"
-                                    @click="editandoEnvio = !editandoEnvio"
+                                    @click="
+                                        editandoEntrega = !editandoEntrega
+                                    "
                                 >
                                     ✎
                                 </button>
                             </div>
 
-                            <div v-if="editandoEnvio" class="mt-4 space-y-3">
-                                <input
-                                    v-model="form.paqueteria"
-                                    type="text"
-                                    placeholder="Paquetería"
-                                    class="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm outline-none focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10"
-                                />
+                            <div
+                                v-if="editandoEntrega"
+                                class="mt-4 space-y-3"
+                            >
+                                <template v-if="!esRecoleccion">
+                                    <label class="block">
+                                        <span
+                                            class="mb-1 block text-xs font-black text-neutral-500 uppercase"
+                                        >
+                                            Fecha de entrega programada
+                                        </span>
+                                        <input
+                                            v-model="
+                                                form.fecha_entrega_programada
+                                            "
+                                            type="datetime-local"
+                                            class="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm outline-none focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10"
+                                        />
+                                    </label>
 
-                                <input
-                                    v-model="form.numero_guia"
-                                    type="text"
-                                    placeholder="Número de guía"
-                                    class="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm outline-none focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10"
+                                    <input
+                                        v-model="form.zona_entrega"
+                                        type="text"
+                                        placeholder="Zona de entrega"
+                                        class="h-11 w-full rounded-xl border border-neutral-200 px-3 text-sm outline-none focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10"
+                                    />
+
+                                    <textarea
+                                        v-model="form.instrucciones_entrega"
+                                        rows="3"
+                                        placeholder="Instrucciones de entrega"
+                                        class="w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm outline-none focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10"
+                                    />
+                                </template>
+
+                                <textarea
+                                    v-model="form.comentario_interno"
+                                    rows="3"
+                                    placeholder="Comentario interno"
+                                    class="w-full rounded-xl border border-neutral-200 px-3 py-3 text-sm outline-none focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10"
                                 />
 
                                 <button
                                     type="button"
                                     class="w-full rounded-full border border-neutral-900 bg-white px-4 py-2.5 text-sm font-black text-neutral-950 transition hover:bg-neutral-950 hover:text-white"
                                     :disabled="form.processing"
-                                    @click="guardarSoloEnvio"
+                                    @click="guardarDatosEntrega"
                                 >
-                                    Guardar envío
+                                    Guardar datos operativos
                                 </button>
                             </div>
                         </div>
@@ -759,7 +919,7 @@ watch(() => page.props.flash, mostrarFlash, { deep: true });
                             <textarea
                                 v-model="form.comentario"
                                 rows="3"
-                                placeholder="Ej. Pedido entregado a paquetería."
+                                placeholder="Ej. Pedido listo para recoger."
                                 class="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-sm transition outline-none focus:border-neutral-950 focus:ring-4 focus:ring-neutral-950/10"
                             />
 

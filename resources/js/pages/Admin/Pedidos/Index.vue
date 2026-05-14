@@ -41,12 +41,17 @@ interface Pedido {
     id: number;
     folio: string;
     estatus: string;
+    tipo_entrega?: 'recoleccion' | 'entrega_local' | null;
+    codigo_recoleccion?: string | null;
+    listo_para_recoger_en?: string | null;
+    fecha_entrega_programada?: string | null;
+    salio_a_entrega_en?: string | null;
+    zona_entrega?: string | null;
+    instrucciones_entrega?: string | null;
     total: number | string;
     nombre_cliente: string;
     correo_cliente: string;
     telefono_cliente?: string | null;
-    paqueteria?: string | null;
-    numero_guia?: string | null;
     comentario_interno?: string | null;
     items: PedidoItemPreview[];
     pagos?: PagoRow[];
@@ -111,10 +116,10 @@ let searchTimeout: number | undefined;
 const hayFiltrosActivos = computed(() =>
     Boolean(
         filterForm.buscar ||
-        filterForm.estatus ||
-        filterForm.pago ||
-        filterForm.fecha_desde ||
-        filterForm.fecha_hasta,
+            filterForm.estatus ||
+            filterForm.pago ||
+            filterForm.fecha_desde ||
+            filterForm.fecha_hasta,
     ),
 );
 
@@ -199,7 +204,8 @@ const estatusLabel = (estatus: string) => {
         pendiente: 'Pendiente',
         pagado: 'Pagado',
         preparando: 'Preparando',
-        enviado: 'Enviado',
+        listo_para_recoger: 'Listo para recoger',
+        salio_a_entrega: 'Salió a entrega',
         entregado: 'Entregado',
         cancelado: 'Cancelado',
         reembolsado: 'Reembolsado',
@@ -217,7 +223,8 @@ const estatusClasses = (estatus: string) => {
         pendiente: 'border-amber-200 bg-amber-50 text-amber-700',
         pagado: 'border-emerald-200 bg-emerald-50 text-emerald-700',
         preparando: 'border-sky-200 bg-sky-50 text-sky-700',
-        enviado: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+        listo_para_recoger: 'border-cyan-200 bg-cyan-50 text-cyan-700',
+        salio_a_entrega: 'border-indigo-200 bg-indigo-50 text-indigo-700',
         entregado: 'border-lime-200 bg-lime-50 text-lime-700',
         cancelado: 'border-red-200 bg-red-50 text-red-700',
         reembolsado: 'border-purple-200 bg-purple-50 text-purple-700',
@@ -266,6 +273,20 @@ const inicialProducto = (pedido: Pedido) => {
     return item?.nombre?.charAt(0)?.toUpperCase() || 'P';
 };
 
+const metodoEntregaLabel = (pedido: Pedido) => {
+    return (pedido.tipo_entrega ?? 'recoleccion') === 'recoleccion'
+        ? 'Recolección'
+        : 'Entrega local';
+};
+
+const entregaDetalle = (pedido: Pedido) => {
+    if ((pedido.tipo_entrega ?? 'recoleccion') === 'recoleccion') {
+        return pedido.codigo_recoleccion || 'Código pendiente';
+    }
+
+    return pedido.zona_entrega || 'Zona sin registrar';
+};
+
 const formatDate = (value?: string | null) => {
     if (!value) return 'Sin fecha';
 
@@ -312,6 +333,10 @@ const seleccionarPago = (pago: string) => {
                         >
                             Pedidos
                         </h1>
+                        <p class="mt-1 text-sm text-neutral-500">
+                            Gestión de pedidos de Punto Polar: recolección y
+                            entrega local.
+                        </p>
                     </div>
                 </div>
 
@@ -396,7 +421,7 @@ const seleccionarPago = (pago: string) => {
                         <input
                             v-model="filterForm.buscar"
                             type="text"
-                            placeholder="Buscar por folio, cliente, correo o teléfono"
+                            placeholder="Buscar por folio, cliente, correo, teléfono o código"
                             class="h-12 w-full rounded-2xl border border-neutral-200 bg-neutral-50 pr-4 pl-11 text-sm transition outline-none focus:border-neutral-950 focus:bg-white focus:ring-4 focus:ring-neutral-950/10"
                         />
                     </div>
@@ -616,30 +641,29 @@ const seleccionarPago = (pago: string) => {
                             <p
                                 class="text-[11px] font-black tracking-[0.12em] text-neutral-400 uppercase"
                             >
-                                Envío
+                                Entrega
                             </p>
 
                             <p
                                 class="mt-2 truncate text-sm font-black text-neutral-950"
                             >
-                                {{ pedido.paqueteria || 'Pendiente' }}
+                                {{ metodoEntregaLabel(pedido) }}
                             </p>
                         </div>
                     </div>
 
                     <div
-                        v-if="pedido.numero_guia"
-                        class="mt-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-3"
+                        class="mt-3 rounded-2xl border border-sky-200 bg-sky-50 p-3"
                     >
                         <p
-                            class="text-[11px] font-black tracking-[0.12em] text-indigo-700 uppercase"
+                            class="text-[11px] font-black tracking-[0.12em] text-sky-700 uppercase"
                         >
-                            Guía
+                            Datos de entrega
                         </p>
                         <p
-                            class="mt-1 text-sm font-semibold break-all text-indigo-950"
+                            class="mt-1 text-sm font-semibold break-all text-sky-950"
                         >
-                            {{ pedido.numero_guia }}
+                            {{ entregaDetalle(pedido) }}
                         </p>
                     </div>
 

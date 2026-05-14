@@ -8,9 +8,10 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class MisPedidosController extends Controller {
-
-    public function index(Request $request): Response {
+class MisPedidosController extends Controller
+{
+    public function index(Request $request): Response
+    {
         $pedidos = Pedido::query()
             ->with('items')
             ->where('user_id', $request->user()->id)
@@ -21,6 +22,10 @@ class MisPedidosController extends Controller {
                     'id' => $pedido->id,
                     'folio' => $pedido->folio,
                     'estatus' => $pedido->estatus,
+                    'tipo_entrega' => $pedido->tipo_entrega,
+                    'codigo_recoleccion' => $pedido->codigo_recoleccion,
+                    'listo_para_recoger_en' => $pedido->listo_para_recoger_en?->toDateTimeString(),
+                    'salio_a_entrega_en' => $pedido->salio_a_entrega_en?->toDateTimeString(),
                     'total' => (float) $pedido->total,
                     'created_at' => $pedido->created_at?->toDateTimeString(),
                     'items' => $pedido->items->map(fn ($item) => [
@@ -30,24 +35,35 @@ class MisPedidosController extends Controller {
                     ])->values(),
                 ];
             });
+
         return Inertia::render('Cliente/Pedidos/Index', [
             'pedidos' => $pedidos,
         ]);
     }
 
-    public function show(Request $request, Pedido $pedido): Response {
+    public function show(Request $request, Pedido $pedido): Response
+    {
         abort_unless((int) $pedido->user_id === (int) $request->user()->id, 404);
+
         $pedido->load([
             'direccion',
             'items.producto:id,nombre,slug',
             'pagos.metodoPago:id,nombre,clave',
             'historial.user:id,name',
         ]);
+
         return Inertia::render('Cliente/Pedidos/Show', [
             'pedido' => [
                 'id' => $pedido->id,
                 'folio' => $pedido->folio,
                 'estatus' => $pedido->estatus,
+                'tipo_entrega' => $pedido->tipo_entrega,
+                'codigo_recoleccion' => $pedido->codigo_recoleccion,
+                'listo_para_recoger_en' => $pedido->listo_para_recoger_en?->toDateTimeString(),
+                'fecha_entrega_programada' => $pedido->fecha_entrega_programada?->toDateTimeString(),
+                'salio_a_entrega_en' => $pedido->salio_a_entrega_en?->toDateTimeString(),
+                'zona_entrega' => $pedido->zona_entrega,
+                'instrucciones_entrega' => $pedido->instrucciones_entrega,
                 'moneda' => $pedido->moneda,
                 'subtotal' => (float) $pedido->subtotal,
                 'descuento' => (float) $pedido->descuento,
@@ -119,5 +135,4 @@ class MisPedidosController extends Controller {
             ],
         ]);
     }
-
 }

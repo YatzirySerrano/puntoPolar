@@ -34,11 +34,31 @@ interface PedidoItem {
     subtotal: number;
 }
 
+interface DireccionPedido {
+    nombre_receptor: string;
+    telefono: string;
+    calle: string;
+    numero_exterior: string;
+    numero_interior?: string | null;
+    colonia: string;
+    municipio: string;
+    estado: string;
+    codigo_postal: string;
+    referencias?: string | null;
+}
+
 const props = defineProps<{
     pedido: {
         id: number;
         folio: string;
         estatus: string;
+        tipo_entrega?: 'recoleccion' | 'entrega_local' | null;
+        codigo_recoleccion?: string | null;
+        listo_para_recoger_en?: string | null;
+        fecha_entrega_programada?: string | null;
+        salio_a_entrega_en?: string | null;
+        zona_entrega?: string | null;
+        instrucciones_entrega?: string | null;
         subtotal: number;
         descuento: number;
         envio: number;
@@ -46,18 +66,7 @@ const props = defineProps<{
         moneda: string;
         created_at: string | null;
         items: PedidoItem[];
-        direccion: {
-            nombre_receptor: string;
-            telefono: string;
-            calle: string;
-            numero_exterior: string;
-            numero_interior?: string | null;
-            colonia: string;
-            municipio: string;
-            estado: string;
-            codigo_postal: string;
-            referencias?: string | null;
-        } | null;
+        direccion: DireccionPedido | null;
         pago: {
             id: number;
             estatus: string;
@@ -97,11 +106,46 @@ const flashError = computed(() => page.props.flash?.error ?? '');
 const flashSuccess = computed(() => page.props.flash?.success ?? '');
 const puedePagar = computed(() => props.pedido.estatus === 'pendiente');
 
+const esRecoleccion = computed(() => {
+    return (props.pedido.tipo_entrega ?? 'recoleccion') === 'recoleccion';
+});
+
+const metodoEntregaLabel = computed(() => {
+    return esRecoleccion.value ? 'Recolección en Punto Polar' : 'Entrega local';
+});
+
+const estatusLabel = computed(() => {
+    const labels: Record<string, string> = {
+        pendiente: 'Pendiente',
+        pagado: 'Pagado',
+        preparando: 'Preparando',
+        listo_para_recoger: 'Listo para recoger',
+        salio_a_entrega: 'Salió a entrega',
+        entregado: 'Entregado',
+        cancelado: 'Cancelado',
+        reembolsado: 'Reembolsado',
+    };
+
+    return labels[props.pedido.estatus] ?? props.pedido.estatus;
+});
+
 const formatearMoneda = (valor: number) => {
     return new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN',
     }).format(Number(valor ?? 0));
+};
+
+const formatDate = (value?: string | null) => {
+    if (!value) return null;
+
+    return new Date(value).toLocaleString('es-MX', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 };
 
 const loadScript = (src: string) => {
@@ -164,9 +208,7 @@ const normalizarMes = (value: string) => {
 };
 
 const normalizarAnio = (value: string) => {
-    const clean = value.replace(/\D/g, '').slice(-2);
-
-    return clean;
+    return value.replace(/\D/g, '').slice(-2);
 };
 
 const pagar = () => {
@@ -252,7 +294,7 @@ onMounted(() => {
                             <p
                                 class="text-xs font-black tracking-[0.24em] text-[#30beef] uppercase"
                             >
-                                Pedido creado
+                                {{ puedePagar ? 'Pedido creado' : 'Pedido confirmado' }}
                             </p>
 
                             <h1
@@ -262,8 +304,11 @@ onMounted(() => {
                             </h1>
 
                             <p class="mt-3 text-sm text-neutral-500">
-                                Revisa el resumen y realiza el pago para
-                                confirmar tu compra.
+                                {{
+                                    puedePagar
+                                        ? 'Revisa el resumen de tu pedido y realiza el pago para confirmar tu compra.'
+                                        : 'Tu pago ya fue registrado correctamente. Revisa el resumen y los detalles de entrega de tu pedido.'
+                                }}
                             </p>
                         </div>
 
@@ -275,7 +320,7 @@ onMounted(() => {
                                     : 'bg-amber-100 text-amber-700'
                             "
                         >
-                            {{ pedido.estatus }}
+                            {{ estatusLabel }}
                         </div>
                     </div>
                 </div>
@@ -349,13 +394,85 @@ onMounted(() => {
                             class="rounded-[30px] border border-[#dfdfdf] bg-white p-6 shadow-[0_18px_60px_rgba(9,17,28,0.06)]"
                         >
                             <h2 class="text-xl font-black text-neutral-900">
-                                Dirección de envío
+                                Método de entrega
                             </h2>
 
                             <div
-                                v-if="pedido.direccion"
-                                class="mt-4 text-sm leading-7 text-neutral-600"
+                                class="mt-4 rounded-2xl border border-[#30beef]/20 bg-[#30beef]/5 p-5 text-sm leading-7 text-neutral-700"
                             >
+                                <p class="font-black text-neutral-900">
+                                    {{ metodoEntregaLabel }}
+                                </p>
+
+                                <template v-if="esRecoleccion">
+                                    <p class="mt-2">
+                                        Tu pedido será preparado para
+                                        recolección en Punto Polar.
+                                    </p>
+
+                                    <p
+                                        v-if="pedido.codigo_recoleccion"
+                                        class="mt-3 rounded-xl bg-white px-4 py-3 font-black text-[#062A5E]"
+                                    >
+                                        Código de recolección:
+                                        {{ pedido.codigo_recoleccion }}
+                                    </p>
+
+                                    <p
+                                        v-if="pedido.listo_para_recoger_en"
+                                        class="mt-2 text-sm text-neutral-600"
+                                    >
+                                        Listo desde:
+                                        {{
+                                            formatDate(
+                                                pedido.listo_para_recoger_en,
+                                            )
+                                        }}
+                                    </p>
+                                </template>
+
+                                <template v-else>
+                                    <p class="mt-2">
+                                        Tu pedido será atendido mediante entrega
+                                        local propia.
+                                    </p>
+
+                                    <p
+                                        v-if="pedido.fecha_entrega_programada"
+                                        class="mt-2"
+                                    >
+                                        Fecha programada:
+                                        {{
+                                            formatDate(
+                                                pedido.fecha_entrega_programada,
+                                            )
+                                        }}
+                                    </p>
+
+                                    <p v-if="pedido.zona_entrega" class="mt-2">
+                                        Zona: {{ pedido.zona_entrega }}
+                                    </p>
+
+                                    <p
+                                        v-if="pedido.instrucciones_entrega"
+                                        class="mt-2"
+                                    >
+                                        Indicaciones:
+                                        {{ pedido.instrucciones_entrega }}
+                                    </p>
+                                </template>
+                            </div>
+                        </section>
+
+                        <section
+                            v-if="!esRecoleccion && pedido.direccion"
+                            class="rounded-[30px] border border-[#dfdfdf] bg-white p-6 shadow-[0_18px_60px_rgba(9,17,28,0.06)]"
+                        >
+                            <h2 class="text-xl font-black text-neutral-900">
+                                Dirección de entrega
+                            </h2>
+
+                            <div class="mt-4 text-sm leading-7 text-neutral-600">
                                 <p class="font-black text-neutral-900">
                                     {{ pedido.direccion.nombre_receptor }}
                                 </p>
@@ -394,33 +511,35 @@ onMounted(() => {
 
                             <div class="mt-6 space-y-4 text-sm">
                                 <div class="flex items-center justify-between">
-                                    <span class="text-neutral-500"
-                                        >Subtotal</span
-                                    >
-                                    <span class="font-bold text-neutral-900">{{
-                                        formatearMoneda(pedido.subtotal)
-                                    }}</span>
+                                    <span class="text-neutral-500">
+                                        Subtotal
+                                    </span>
+                                    <span class="font-bold text-neutral-900">
+                                        {{ formatearMoneda(pedido.subtotal) }}
+                                    </span>
                                 </div>
 
                                 <div
                                     v-if="pedido.descuento > 0"
                                     class="flex items-center justify-between"
                                 >
-                                    <span class="text-neutral-500"
-                                        >Descuento</span
-                                    >
-                                    <span class="font-bold text-emerald-600"
-                                        >-{{
+                                    <span class="text-neutral-500">
+                                        Descuento
+                                    </span>
+                                    <span class="font-bold text-emerald-600">
+                                        -{{
                                             formatearMoneda(pedido.descuento)
-                                        }}</span
-                                    >
+                                        }}
+                                    </span>
                                 </div>
 
                                 <div class="flex items-center justify-between">
-                                    <span class="text-neutral-500">Envío</span>
-                                    <span class="font-bold text-neutral-900">{{
-                                        formatearMoneda(pedido.envio)
-                                    }}</span>
+                                    <span class="text-neutral-500">
+                                        Entrega
+                                    </span>
+                                    <span class="font-bold text-neutral-900">
+                                        {{ formatearMoneda(pedido.envio) }}
+                                    </span>
                                 </div>
 
                                 <div class="border-t border-[#ececec] pt-5">
@@ -429,8 +548,9 @@ onMounted(() => {
                                     >
                                         <span
                                             class="text-lg font-black text-neutral-900"
-                                            >Total</span
                                         >
+                                            Total
+                                        </span>
                                         <span
                                             class="text-3xl font-black tracking-tight text-neutral-900"
                                         >
@@ -464,8 +584,9 @@ onMounted(() => {
                                 <div>
                                     <label
                                         class="text-sm font-black text-neutral-800"
-                                        >Nombre en la tarjeta</label
                                     >
+                                        Nombre en la tarjeta
+                                    </label>
                                     <input
                                         v-model="card.holder_name"
                                         type="text"
@@ -477,8 +598,9 @@ onMounted(() => {
                                 <div>
                                     <label
                                         class="text-sm font-black text-neutral-800"
-                                        >Número de tarjeta</label
                                     >
+                                        Número de tarjeta
+                                    </label>
                                     <input
                                         v-model="card.card_number"
                                         type="text"
@@ -493,8 +615,9 @@ onMounted(() => {
                                     <div>
                                         <label
                                             class="text-sm font-black text-neutral-800"
-                                            >Mes</label
                                         >
+                                            Mes
+                                        </label>
                                         <input
                                             v-model="card.expiration_month"
                                             type="text"
@@ -508,8 +631,9 @@ onMounted(() => {
                                     <div>
                                         <label
                                             class="text-sm font-black text-neutral-800"
-                                            >Año</label
                                         >
+                                            Año
+                                        </label>
                                         <input
                                             v-model="card.expiration_year"
                                             type="text"
@@ -523,8 +647,9 @@ onMounted(() => {
                                     <div>
                                         <label
                                             class="text-sm font-black text-neutral-800"
-                                            >CVV</label
                                         >
+                                            CVV
+                                        </label>
                                         <input
                                             v-model="card.cvv2"
                                             type="password"
@@ -538,7 +663,7 @@ onMounted(() => {
 
                                 <button
                                     type="submit"
-                                    class="w-full rounded-full bg-gradient-to-r from-[#7dd03c] to-[#30beef] px-4 py-3.5 font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:opacity-90 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
+                                    class="w-full rounded-full bg-gradient-to-r from-[#30BEEF] to-[#062A5E] px-4 py-3.5 font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:opacity-90 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
                                     :disabled="paying || !openpayReady"
                                 >
                                     {{

@@ -14,29 +14,43 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class PedidoController extends Controller {
-
+class PedidoController extends Controller
+{
     private const ESTATUS = [
         'pendiente',
         'pagado',
         'preparando',
-        'enviado',
+        'listo_para_recoger',
+        'salio_a_entrega',
         'entregado',
         'cancelado',
         'reembolsado',
     ];
 
-    private const TRANSICIONES = [
+    private const TRANSICIONES_RECOLECCION = [
         'pendiente' => ['pagado', 'cancelado'],
         'pagado' => ['preparando', 'reembolsado'],
-        'preparando' => ['enviado', 'cancelado'],
-        'enviado' => ['entregado'],
+        'preparando' => ['listo_para_recoger', 'cancelado'],
+        'listo_para_recoger' => ['entregado', 'cancelado'],
+        'salio_a_entrega' => ['entregado'],
         'entregado' => [],
         'cancelado' => [],
         'reembolsado' => [],
     ];
 
-    public function index(Request $request): Response {
+    private const TRANSICIONES_ENTREGA_LOCAL = [
+        'pendiente' => ['pagado', 'cancelado'],
+        'pagado' => ['preparando', 'reembolsado'],
+        'preparando' => ['salio_a_entrega', 'cancelado'],
+        'listo_para_recoger' => ['entregado'],
+        'salio_a_entrega' => ['entregado', 'cancelado'],
+        'entregado' => [],
+        'cancelado' => [],
+        'reembolsado' => [],
+    ];
+
+    public function index(Request $request): Response
+    {
         $estatus = $request->string('estatus')->toString();
         $pago = $request->string('pago')->toString();
         $buscar = trim($request->string('buscar')->toString());
@@ -60,7 +74,8 @@ class PedidoController extends Controller {
                         ->where('folio', 'like', "%{$buscar}%")
                         ->orWhere('nombre_cliente', 'like', "%{$buscar}%")
                         ->orWhere('correo_cliente', 'like', "%{$buscar}%")
-                        ->orWhere('telefono_cliente', 'like', "%{$buscar}%");
+                        ->orWhere('telefono_cliente', 'like', "%{$buscar}%")
+                        ->orWhere('codigo_recoleccion', 'like', "%{$buscar}%");
                 });
             })
             ->when($fechaDesde, fn ($query) => $query->whereDate('created_at', '>=', $fechaDesde))
@@ -72,7 +87,9 @@ class PedidoController extends Controller {
             'total_pedidos' => (clone $statsBase)->count(),
             'monto_visible' => (float) (clone $statsBase)->sum('total'),
             'pendientes' => (clone $statsBase)->where('estatus', 'pendiente')->count(),
-            'en_operacion' => (clone $statsBase)->whereIn('estatus', ['pagado', 'preparando', 'enviado'])->count(),
+            'en_operacion' => (clone $statsBase)
+                ->whereIn('estatus', ['pagado', 'preparando', 'listo_para_recoger', 'salio_a_entrega'])
+                ->count(),
             'entregados' => (clone $statsBase)->where('estatus', 'entregado')->count(),
         ];
 
@@ -84,12 +101,17 @@ class PedidoController extends Controller {
                     'id' => $pedido->id,
                     'folio' => $pedido->folio,
                     'estatus' => $pedido->estatus,
+                    'tipo_entrega' => $pedido->tipo_entrega,
+                    'codigo_recoleccion' => $pedido->codigo_recoleccion,
+                    'listo_para_recoger_en' => $pedido->listo_para_recoger_en?->toDateTimeString(),
+                    'fecha_entrega_programada' => $pedido->fecha_entrega_programada?->toDateTimeString(),
+                    'salio_a_entrega_en' => $pedido->salio_a_entrega_en?->toDateTimeString(),
+                    'zona_entrega' => $pedido->zona_entrega,
+                    'instrucciones_entrega' => $pedido->instrucciones_entrega,
                     'total' => (float) $pedido->total,
                     'nombre_cliente' => $pedido->nombre_cliente,
                     'correo_cliente' => $pedido->correo_cliente,
                     'telefono_cliente' => $pedido->telefono_cliente,
-                    'paqueteria' => $pedido->paqueteria,
-                    'numero_guia' => $pedido->numero_guia,
                     'comentario_interno' => $pedido->comentario_interno,
                     'created_at' => $pedido->created_at?->toDateTimeString(),
                     'items' => $pedido->items->map(function ($item) {
@@ -141,7 +163,8 @@ class PedidoController extends Controller {
         ]);
     }
 
-    public function show(Pedido $pedido): Response {
+    public function show(Pedido $pedido): Response
+    {
         $pedido->load([
             'user:id,name,email',
             'direccion',
@@ -156,7 +179,9 @@ class PedidoController extends Controller {
                 'id' => $pedido->id,
                 'folio' => $pedido->folio,
                 'estatus' => $pedido->estatus,
-                'estatus_siguientes' => self::TRANSICIONES[$pedido->estatus] ?? [],
+                'estatus_siguientes' => $this->estatusSiguientes($pedido),
+                'tipo_entrega' => $pedido->tipo_entrega,
+                'codigo_recoleccion' => $pedido->codigo_recoleccion,
                 'moneda' => $pedido->moneda,
                 'subtotal' => (float) $pedido->subtotal,
                 'descuento' => (float) $pedido->descuento,
@@ -167,10 +192,13 @@ class PedidoController extends Controller {
                 'correo_cliente' => $pedido->correo_cliente,
                 'telefono_cliente' => $pedido->telefono_cliente,
                 'notas_cliente' => $pedido->notas_cliente,
-                'paqueteria' => $pedido->paqueteria,
-                'numero_guia' => $pedido->numero_guia,
                 'comentario_interno' => $pedido->comentario_interno,
                 'preparando_en' => $pedido->preparando_en?->toDateTimeString(),
+                'listo_para_recoger_en' => $pedido->listo_para_recoger_en?->toDateTimeString(),
+                'fecha_entrega_programada' => $pedido->fecha_entrega_programada?->toDateTimeString(),
+                'salio_a_entrega_en' => $pedido->salio_a_entrega_en?->toDateTimeString(),
+                'zona_entrega' => $pedido->zona_entrega,
+                'instrucciones_entrega' => $pedido->instrucciones_entrega,
                 'enviado_en' => $pedido->enviado_en?->toDateTimeString(),
                 'entregado_en' => $pedido->entregado_en?->toDateTimeString(),
                 'pagado_en' => $pedido->pagado_en?->toDateTimeString(),
@@ -250,29 +278,28 @@ class PedidoController extends Controller {
         $data = $request->validate([
             'estatus' => ['required', Rule::in(self::ESTATUS)],
             'comentario' => ['nullable', 'string', 'max:500'],
-            'paqueteria' => ['nullable', 'string', 'max:120'],
-            'numero_guia' => ['nullable', 'string', 'max:180'],
             'comentario_interno' => ['nullable', 'string', 'max:5000'],
+            'fecha_entrega_programada' => ['nullable', 'date'],
+            'zona_entrega' => ['nullable', 'string', 'max:120'],
+            'instrucciones_entrega' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $estatusAnterior = $pedido->estatus;
         $nuevoEstatus = $data['estatus'];
 
-        $permitidos = self::TRANSICIONES[$pedido->estatus] ?? [];
+        $permitidos = $this->estatusSiguientes($pedido);
 
         if ($pedido->estatus !== $nuevoEstatus && ! in_array($nuevoEstatus, $permitidos, true)) {
-            return back()->with('error', 'No puedes regresar el pedido a un estado anterior.');
+            return back()->with('error', 'No puedes cambiar el pedido a ese estado desde el estado actual.');
         }
 
-        if ($nuevoEstatus === 'enviado') {
-            if (empty($data['paqueteria']) || empty($data['numero_guia'])) {
-                return back()->with('error', 'Para marcar como enviado debes capturar paquetería y número de guía.');
-            }
-        }
-
-        $pedido->paqueteria = $data['paqueteria'] ?? $pedido->paqueteria;
-        $pedido->numero_guia = $data['numero_guia'] ?? $pedido->numero_guia;
         $pedido->comentario_interno = $data['comentario_interno'] ?? $pedido->comentario_interno;
+
+        if ($pedido->tipo_entrega === 'entrega_local') {
+            $pedido->fecha_entrega_programada = $data['fecha_entrega_programada'] ?? $pedido->fecha_entrega_programada;
+            $pedido->zona_entrega = $data['zona_entrega'] ?? $pedido->zona_entrega;
+            $pedido->instrucciones_entrega = $data['instrucciones_entrega'] ?? $pedido->instrucciones_entrega;
+        }
 
         if ($pedido->estatus !== $nuevoEstatus) {
             $pedido->estatus = $nuevoEstatus;
@@ -285,8 +312,13 @@ class PedidoController extends Controller {
                 $pedido->preparando_en = now();
             }
 
-            if ($nuevoEstatus === 'enviado' && ! $pedido->enviado_en) {
-                $pedido->enviado_en = now();
+            if ($nuevoEstatus === 'listo_para_recoger' && ! $pedido->listo_para_recoger_en) {
+                $pedido->listo_para_recoger_en = now();
+            }
+
+            if ($nuevoEstatus === 'salio_a_entrega' && ! $pedido->salio_a_entrega_en) {
+                $pedido->salio_a_entrega_en = now();
+                $pedido->enviado_en = $pedido->enviado_en ?: now();
             }
 
             if ($nuevoEstatus === 'entregado' && ! $pedido->entregado_en) {
@@ -314,13 +346,22 @@ class PedidoController extends Controller {
         return back()->with('success', 'Pedido actualizado correctamente.');
     }
 
+    private function estatusSiguientes(Pedido $pedido): array
+    {
+        $transiciones = $pedido->tipo_entrega === 'entrega_local'
+            ? self::TRANSICIONES_ENTREGA_LOCAL
+            : self::TRANSICIONES_RECOLECCION;
+
+        return $transiciones[$pedido->estatus] ?? [];
+    }
+
     private function enviarCorreoPorEstatus(Pedido $pedido, string $estatus): void
     {
         if (! $pedido->correo_cliente) {
             return;
         }
 
-        if (! in_array($estatus, ['preparando', 'enviado', 'entregado'], true)) {
+        if (! in_array($estatus, ['pagado', 'preparando', 'listo_para_recoger', 'salio_a_entrega', 'entregado'], true)) {
             return;
         }
 
@@ -333,7 +374,8 @@ class PedidoController extends Controller {
         }
     }
 
-    private function productoImagenUrl($producto): ?string {
+    private function productoImagenUrl($producto): ?string
+    {
         if (! $producto) {
             return null;
         }
@@ -368,5 +410,4 @@ class PedidoController extends Controller {
 
         return Storage::url($ruta);
     }
-
 }
