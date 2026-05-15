@@ -1,183 +1,391 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue';
+import { Link, usePage } from '@inertiajs/vue3';
+import logo from '@/img/punto_polar_logo_transparente.svg'
 
-type Active = 'inicio' | ''
-type NavItem = { key: Active; href: string; label: string; icon: string }
+type Active = 'inicio' | '';
 
-const page = usePage()
-const year = new Date().getFullYear()
+type NavItem = {
+    key: Active;
+    href: string;
+    label: string;
+};
+
+const page = usePage();
+const year = new Date().getFullYear();
+
+const phoneRaw = '7771148125';
+const phonePretty = '777 114 8125';
+const whatsappUrl = `https://wa.me/52${phoneRaw}`;
+
+const address = 'Privada Chilpancingo #20, Vicente Guerrero, Jiutepec, Mor.';
+const reference = 'Frente a Capilla San Mateo';
+
+const mapsUrl = 'https://maps.app.goo.gl/PXmUr6LGAF76msMc8';
+
+const mapsEmbedUrl =
+    'https://www.google.com/maps?q=Privada%20Chilpancingo%2020%20Vicente%20Guerrero%20Jiutepec%20Morelos&output=embed';
 
 const activeKey = computed<Active>(() => {
-  const url = (page.url || '').toLowerCase()
-  if (url === '/' || url.startsWith('/index')) return 'inicio'
-  return ''
-})
+    const url = String(page.url || '').toLowerCase();
+
+    if (url === '/' || url.startsWith('/index')) return 'inicio';
+
+    return '';
+});
 
 const isActive = (key: Active, href: string) => {
-  const url = (page.url || '').toLowerCase()
-  if (key) return key === activeKey.value
-  return href !== '/' ? url.startsWith(href) : url === '/'
-}
+    const url = String(page.url || '').toLowerCase();
 
-const icons = {
-  home: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M6.5 10v10.5h11V10"/></svg>`,
-  layers: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 4.5-9 4.5L3 7.5 12 3Z"/><path d="m3 12 9 4.5 9-4.5"/><path d="m3 16.5 9 4.5 9-4.5"/></svg>`,
-  sparkles: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.2 4.2L17 7.4l-3.8 1.2L12 13l-1.2-4.4L7 7.4l3.8-1.2L12 2z"/><path d="M19 13l.7 2.3 2.3.7-2.3.7L19 19l-.7-2.3-2.3-.7 2.3-.7L19 13z"/></svg>`,
-  package: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8.25v7.5a2.25 2.25 0 0 1-1.125 1.95l-6.75 3.9a2.25 2.25 0 0 1-2.25 0l-6.75-3.9A2.25 2.25 0 0 1 3 15.75v-7.5a2.25 2.25 0 0 1 1.125-1.95l6.75-3.9a2.25 2.25 0 0 1 2.25 0l6.75 3.9A2.25 2.25 0 0 1 21 8.25Z"/><path d="M3.3 7.07 12 12l8.7-4.93"/><path d="M12 22V12"/></svg>`,
-  phone: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.32 1.78.59 2.64a2 2 0 0 1-.45 2.11L8 9.91a16 16 0 0 0 6.09 6.09l1.44-1.25a2 2 0 0 1 2.11-.45c.86.27 1.74.47 2.64.59A2 2 0 0 1 22 16.92z"/></svg>`,
-  mail: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>`,
-  facebook: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 21v-7h2.3l.4-2.7h-2.7V9.6c0-.8.2-1.3 1.4-1.3H16V5.9c-.2 0-.9-.1-1.8-.1-1.8 0-3 1.1-3 3.2v2.3H9v2.7h2.4v7h2.1Z"/></svg>`,
-  instagram: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.5 6.5h.01"/></svg>`,
-  shield: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-  file: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>`,
-} as const
+    if (key) return key === activeKey.value;
+
+    return href !== '/' ? url.startsWith(href) : url === '/';
+};
 
 const siteLinks = computed<NavItem[]>(() => [
-  { key: 'inicio', label: 'Inicio', href: '/', icon: icons.home },
-  { key: '', label: 'Categorías', href: '/#catalogo-categorias', icon: icons.layers },
-  { key: '', label: 'Destacados', href: '/#productos-destacados', icon: icons.sparkles },
-  { key: '', label: 'Productos', href: '/productos', icon: icons.package },
-])
+    {
+        key: 'inicio',
+        label: 'Inicio',
+        href: '/',
+    },
+    {
+        key: '',
+        label: 'Productos',
+        href: '/productos',
+    },
+    {
+        key: '',
+        label: 'Cómo comprar',
+        href: '/#como-comprar',
+    },
+    {
+        key: '',
+        label: 'Filtrado',
+        href: '/#filtrado',
+    },
+    {
+        key: '',
+        label: 'Preguntas frecuentes',
+        href: '/#faq',
+    },
+]);
 
 const legalLinks = [
-  { label: 'Términos y condiciones', href: '/terminos-y-condiciones', icon: icons.file },
-  { label: 'Aviso de privacidad', href: '/aviso-de-privacidad', icon: icons.shield },
-]
+    {
+        label: 'Términos y condiciones',
+        href: '/terminos-y-condiciones',
+    },
+    {
+        label: 'Aviso de privacidad',
+        href: '/aviso-de-privacidad',
+    },
+];
+
+const productLinks = [
+    {
+        label: 'Agua purificada',
+        href: '/productos',
+    },
+    {
+        label: 'Hielo',
+        href: '/productos',
+    },
+    {
+        label: 'Promociones',
+        href: '/productos',
+    },
+];
 
 const socialLinks = [
-  { label: 'Facebook', href: 'https://www.facebook.com/people/Mr-Lana/61552688275964/', icon: icons.facebook },
-  { label: 'Instagram', href: 'https://www.instagram.com/mr.lana_mx/', icon: icons.instagram },
-]
-
-const UI = {
-  footer: 'w-full text-slate-900 bg-white',
-  pad: 'px-6 lg:px-10 xl:px-14 2xl:px-16',
-  h: 'text-[12px] font-black tracking-[0.24em] uppercase text-slate-700/80',
-  pill: (active: boolean) =>
-    [
-      'group inline-flex w-full items-center gap-3 rounded-2xl px-4 py-3',
-      'text-[14px] xl:text-[15px] font-semibold',
-      'bg-white/80 ring-1 ring-black/5 shadow',
-      'transition',
-      'hover:-translate-y-[2px] hover:shadow-md',
-      'hover:ring-cyan-400/40 hover:shadow-[0_16px_46px_-30px_rgba(34,211,238,0.55)]',
-      'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
-      active && 'ring-2 ring-emerald-400/55',
-    ].filter(Boolean).join(' '),
-  icon: 'h-[18px] w-[18px] opacity-90 transition group-hover:opacity-100',
-  underline:
-    'underline decoration-transparent underline-offset-4 transition group-hover:decoration-emerald-500/70',
-  legal:
-    'group inline-flex w-full md:w-auto items-center gap-3 rounded-2xl px-3 py-2 text-[14px] font-semibold ' +
-    'whitespace-nowrap text-slate-800 hover:text-slate-950 hover:bg-white/65 ring-1 ring-transparent ' +
-    'transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
-  legalU:
-    'relative after:absolute after:-bottom-0.5 after:left-0 after:h-[2px] after:w-0 ' +
-    'after:bg-gradient-to-r after:from-cyan-500 after:via-emerald-500 after:to-lime-400 ' +
-    'after:transition-all after:duration-300 group-hover:after:w-full',
-}
+    {
+        label: 'Facebook',
+        href: 'https://www.facebook.com/profile.php?id=61578482788839&locale=es_LA',
+        icon: 'facebook',
+    },
+    {
+        label: 'Instagram',
+        href: 'https://www.instagram.com/puntopolar.hieloagua/',
+        icon: 'instagram',
+    },
+    {
+        label: 'TikTok',
+        href: 'https://www.tiktok.com/@punto.polar.hielo?is_from_webapp=1&sender_device=pc',
+        icon: 'tiktok',
+    },
+];
 </script>
 
 <template>
-  <footer :class="UI.footer" role="contentinfo">
-    <div class="relative">
-      <img
-        src="/img/footer/mobile-footer.webp"
-        class="block w-full select-none object-cover"
-        loading="lazy"
-        alt="Mr. Lana"
-        draggable="false"
-      />
-    </div>
+    <footer
+        class="relative overflow-hidden bg-[linear-gradient(135deg,#ffffff_0%,#eaf9ff_34%,#d9f5ff_62%,#ffffff_100%)] text-slate-950"
+        role="contentinfo"
+    >
+        <div
+            class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(48,190,239,0.22),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(6,42,94,0.12),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(48,190,239,0.12),transparent_36%)]"
+        />
 
-    <section :class="[UI.pad, 'py-3']" aria-label="Footer">
-      <div class="grid grid-cols-1 gap-10 md:grid-cols-12 md:gap-12">
-        <!-- Contacto -->
-        <address class="not-italic min-w-0 md:col-span-6 lg:col-span-4 xl:col-span-3">
-          <div class="mt-4 space-y-4">
-            <a
-            href="https://wa.me/527774225973"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="group inline-flex items-center gap-3 text-[15px] font-semibold text-slate-900 transition hover:text-emerald-600"
-            >
-            <span class="h-[18px] w-[18px] text-emerald-500" v-html="icons.phone" aria-hidden="true" />
-            <span>(777) 422-5973</span>
-            </a>
-            <br>
-            <a
-              href="mailto:atencion@mr-lana.com"
-              class="group inline-flex items-center gap-3 text-[15px] font-semibold text-slate-900 transition hover:text-cyan-600"
-            >
-              <span class="h-[18px] w-[18px] text-pink-500" v-html="icons.mail" aria-hidden="true" />
-              <span>atencion@mr-lana.com</span>
-            </a>
-          </div>
+        <section id="contacto-home" class="relative px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+            <div class="mx-auto w-full max-w-[1320px]">
+                <div
+                    class="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(380px,0.95fr)] lg:gap-10"
+                >
+                    <div class="space-y-6">
+                        <div>
+                            <Link href="/" class="inline-flex items-center">
+                                <img
+                                    :src="logo"
+                                    alt="Punto Polar"
+                                    class="h-20 w-auto object-contain drop-shadow-[0_14px_30px_rgba(6,42,94,0.14)] sm:h-24 lg:h-28"
+                                />
+                            </Link>
 
-          <p class="mt-4 text-sm font-semibold text-slate-800">
-            Servicio al cliente:
-            <span class="ml-2 text-slate-950">LUN–SAB: 10:00am a 7:00pm</span>
-          </p>
-        </address>
+                            <p
+                                class="mt-4 max-w-xl text-sm leading-7 text-slate-700 md:text-base"
+                            >
+                                Agua purificada y hielo disponibles 24/7. Compra
+                                en línea con pago anticipado y recoge en nuestra
+                                ubicación.
+                            </p>
+                        </div>
 
-        <!-- Enlaces -->
-        <nav class="min-w-0 md:col-span-6 lg:col-span-8 xl:col-span-9" aria-label="Sitio">
-          <div :class="UI.h">Enlaces del sitio</div>
+                        <div class="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                            <a
+                                :href="whatsappUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="group inline-flex items-center gap-4 rounded-[26px] bg-white/25 px-2 py-2 transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/55"
+                                aria-label="Contactar por WhatsApp"
+                            >
+                                <span
+                                    class="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] bg-white/45 text-black shadow-[0_12px_26px_rgba(6,42,94,0.10)] backdrop-blur-xl transition group-hover:bg-white"
+                                >
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        class="h-7 w-7 fill-current"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M20.52 3.48A11.84 11.84 0 0 0 12.1 0C5.55 0 .22 5.33.22 11.88c0 2.1.55 4.14 1.6 5.94L0 24l6.32-1.66a11.86 11.86 0 0 0 5.78 1.47h.01c6.55 0 11.88-5.33 11.88-11.88 0-3.18-1.24-6.16-3.47-8.45ZM12.1 21.8h-.01a9.86 9.86 0 0 1-5.03-1.38l-.36-.22-3.75.98 1-3.65-.24-.38a9.82 9.82 0 0 1-1.5-5.26c0-5.45 4.44-9.88 9.9-9.88 2.64 0 5.12 1.03 6.98 2.9a9.78 9.78 0 0 1 2.9 6.98c0 5.46-4.44 9.9-9.89 9.9Zm5.42-7.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.95 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.8-1.49-1.78-1.66-2.08-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.38-.02-.53-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.38-.27.3-1.05 1.03-1.05 2.5s1.08 2.9 1.23 3.1c.15.2 2.12 3.23 5.13 4.52.72.31 1.28.5 1.72.64.72.23 1.38.2 1.9.12.58-.09 1.76-.72 2-1.42.25-.7.25-1.3.18-1.42-.08-.13-.27-.2-.57-.35Z"
+                                        />
+                                    </svg>
+                                </span>
 
-          <ul class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4">
-            <li v-for="l in siteLinks" :key="l.href">
-              <Link :href="l.href" :class="UI.pill(isActive(l.key, l.href))">
-                <span :class="UI.icon" v-html="l.icon" aria-hidden="true" />
-                <span :class="UI.underline">{{ l.label }}</span>
-                <span class="ml-auto opacity-50 transition group-hover:opacity-100" aria-hidden="true">↗</span>
-              </Link>
-            </li>
-          </ul>
-        </nav>
+                                <span>
+                                    <span
+                                        class="block text-[11px] font-black uppercase tracking-[0.22em] text-slate-500"
+                                    >
+                                        WhatsApp
+                                    </span>
+                                    <span
+                                        class="mt-1 block text-xl font-black tracking-tight text-[#062A5E] sm:text-2xl"
+                                    >
+                                        {{ phonePretty }}
+                                    </span>
+                                </span>
+                            </a>
 
-        <!-- Redes -->
-        <section class="min-w-0 md:col-span-12 xl:col-span-6">
-          <div :class="UI.h">Síguenos en</div>
+                            <div class="flex items-center gap-2 sm:justify-end">
+                                <a
+                                    v-for="social in socialLinks"
+                                    :key="social.label"
+                                    :href="social.href"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="group flex h-14 w-14 items-center justify-center rounded-[22px] bg-white/30 text-black shadow-[0_12px_26px_rgba(6,42,94,0.10)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white"
+                                    :aria-label="social.label"
+                                >
+                                    <svg
+                                        v-if="social.icon === 'facebook'"
+                                        viewBox="0 0 24 24"
+                                        class="h-7 w-7 fill-current"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M13.5 22v-8h2.68l.42-3.11h-3.1V8.9c0-.9.25-1.51 1.55-1.51h1.66V4.61c-.29-.04-1.27-.12-2.42-.12-2.4 0-4.04 1.46-4.04 4.15v2.25H8.04V14h2.71v8h2.75Z"
+                                        />
+                                    </svg>
 
-          <ul class="mt-3 flex flex-col gap-3 md:flex-row md:flex-wrap">
-            <li v-for="s in socialLinks" :key="s.label">
-              <a
-                :href="s.href"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="group inline-flex items-center gap-3 rounded-2xl px-3 py-2 text-[14px] font-semibold text-slate-800 transition hover:bg-white/65 hover:text-slate-950"
-              >
-                <span class="h-[18px] w-[18px]" v-html="s.icon" aria-hidden="true" />
-                <span class="relative after:absolute after:-bottom-0.5 after:left-0 after:h-[2px] after:w-0 after:bg-gradient-to-r after:from-cyan-500 after:via-emerald-500 after:to-lime-400 after:transition-all after:duration-300 group-hover:after:w-full">
-                  {{ s.label }}
-                </span>
-              </a>
-            </li>
-          </ul>
+                                    <svg
+                                        v-else-if="social.icon === 'instagram'"
+                                        viewBox="0 0 24 24"
+                                        class="h-7 w-7 fill-none stroke-current"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <rect
+                                            x="3"
+                                            y="3"
+                                            width="18"
+                                            height="18"
+                                            rx="5"
+                                        />
+                                        <circle cx="12" cy="12" r="4" />
+                                        <path d="M17.5 6.5h.01" />
+                                    </svg>
+
+                                    <svg
+                                        v-else
+                                        viewBox="0 0 24 24"
+                                        class="h-7 w-7 fill-current"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M16.58 2c.34 2.42 1.7 3.86 4.08 4.01v3.03c-1.38.13-2.59-.31-3.99-1.16v5.67c0 7.2-7.84 9.45-10.99 4.29-2.02-3.32-.78-9.14 5.7-9.37v3.2c-.45.07-.93.18-1.37.33-1.31.44-2.05 1.27-1.85 2.73.39 2.78 5.48 3.61 5.06-1.83V2h3.36Z"
+                                        />
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+
+                        <div
+                            class="grid gap-6 pt-1 sm:grid-cols-3 lg:max-w-3xl"
+                        >
+                            <nav aria-label="Enlaces del sitio">
+                                <p
+                                    class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500"
+                                >
+                                    Navegación
+                                </p>
+
+                                <ul class="mt-3 space-y-1.5">
+                                    <li
+                                        v-for="link in siteLinks"
+                                        :key="link.href"
+                                    >
+                                        <Link
+                                            :href="link.href"
+                                            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-700 transition hover:text-[#062A5E]"
+                                            :class="
+                                                isActive(link.key, link.href)
+                                                    ? 'text-[#062A5E]'
+                                                    : ''
+                                            "
+                                        >
+                                            <span
+                                                class="h-1.5 w-1.5 rounded-full bg-[#30BEEF] opacity-60 transition group-hover:opacity-100"
+                                            />
+                                            {{ link.label }}
+                                        </Link>
+                                    </li>
+                                </ul>
+                            </nav>
+
+                            <nav aria-label="Productos">
+                                <p
+                                    class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500"
+                                >
+                                    Productos
+                                </p>
+
+                                <ul class="mt-3 space-y-1.5">
+                                    <li
+                                        v-for="link in productLinks"
+                                        :key="link.label"
+                                    >
+                                        <Link
+                                            :href="link.href"
+                                            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-700 transition hover:text-[#062A5E]"
+                                        >
+                                            <span
+                                                class="h-1.5 w-1.5 rounded-full bg-[#30BEEF] opacity-60 transition group-hover:opacity-100"
+                                            />
+                                            {{ link.label }}
+                                        </Link>
+                                    </li>
+                                </ul>
+                            </nav>
+
+                            <nav aria-label="Legal">
+                                <p
+                                    class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500"
+                                >
+                                    Legal
+                                </p>
+
+                                <ul class="mt-3 space-y-1.5">
+                                    <li
+                                        v-for="link in legalLinks"
+                                        :key="link.href"
+                                    >
+                                        <Link
+                                            :href="link.href"
+                                            class="group inline-flex items-center gap-2 text-sm font-bold text-slate-700 transition hover:text-[#062A5E]"
+                                        >
+                                            <span
+                                                class="h-1.5 w-1.5 rounded-full bg-[#30BEEF] opacity-60 transition group-hover:opacity-100"
+                                            />
+                                            {{ link.label }}
+                                        </Link>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <p
+                                class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500"
+                            >
+                                Ubicación
+                            </p>
+
+                            <h3
+                                class="mt-2 text-2xl font-black tracking-tight text-[#062A5E] md:text-3xl"
+                            >
+                                Encuéntranos en Jiutepec
+                            </h3>
+
+                            <p class="mt-2 max-w-xl text-sm leading-6 text-slate-700 md:text-base">
+                                {{ address }}<br />
+                                {{ reference }}
+                            </p>
+                        </div>
+
+                        <div
+                            class="group relative overflow-hidden rounded-[30px] bg-white/30 p-2 shadow-[0_20px_54px_rgba(6,42,94,0.14)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/50"
+                        >
+                            <div
+                                class="relative h-[240px] overflow-hidden rounded-[24px] bg-slate-200 sm:h-[280px] lg:h-[320px]"
+                            >
+                                <iframe
+                                    :src="mapsEmbedUrl"
+                                    class="absolute inset-0 h-full w-full border-0"
+                                    loading="lazy"
+                                    allowfullscreen
+                                    referrerpolicy="no-referrer-when-downgrade"
+                                    title="Ubicación de Punto Polar"
+                                />
+
+                                <div
+                                    class="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-[#062A5E]/75 to-transparent p-4"
+                                />
+
+                                <a
+                                    :href="mapsUrl"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="absolute right-4 bottom-4 z-20 inline-flex rounded-full bg-white px-4 py-2.5 text-xs font-black text-[#062A5E] shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#30BEEF] hover:text-white sm:text-sm"
+                                >
+                                    Abrir en Google Maps →
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="mt-9 flex flex-col gap-2 border-t border-slate-900/10 pt-5 text-sm font-semibold text-slate-600 md:flex-row md:items-center md:justify-between"
+                >
+                    <p>
+                        © {{ year }} Punto Polar. Todos los derechos reservados.
+                    </p>
+
+                    <p>Agua purificada y hielo 24/7.</p>
+                </div>
+            </div>
         </section>
-
-        <!-- Legal -->
-        <section class="min-w-0 md:col-span-12 xl:col-span-6">
-          <div :class="UI.h">Legal</div>
-
-          <ul class="mt-3 flex flex-col gap-2 md:flex-row md:flex-wrap md:gap-3">
-            <li v-for="l in legalLinks" :key="l.href">
-              <Link :href="l.href" :class="UI.legal">
-                <span class="h-[18px] w-[18px] opacity-90" v-html="l.icon" aria-hidden="true" />
-                <span :class="UI.legalU">{{ l.label }}</span>
-                <span class="ml-auto opacity-50 transition group-hover:opacity-100" aria-hidden="true">↗</span>
-              </Link>
-            </li>
-          </ul>
-        </section>
-      </div>
-
-      <div class="mt-10 border-t border-black/10 pt-4 text-center">
-        <p class="text-xs font-semibold text-slate-600">
-          © {{ year }} Mr. Lana. Todos los derechos reservados.
-        </p>
-      </div>
-    </section>
-  </footer>
+    </footer>
 </template>
