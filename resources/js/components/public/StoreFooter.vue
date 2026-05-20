@@ -61,12 +61,12 @@ const siteLinks = computed<NavItem[]>(() => [
     {
         key: '',
         label: 'Filtrado',
-        href: '/#filtrado',
+        href: '/#proceso-filtrado',
     },
     {
         key: '',
         label: 'Preguntas frecuentes',
-        href: '/#faq',
+        href: '/#preguntas-frecuentes',
     },
 ]);
 

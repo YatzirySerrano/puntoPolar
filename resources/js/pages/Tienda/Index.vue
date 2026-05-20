@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import logo from '@/img/punto_polar_logo_navbar.svg';
-import heroImg from '@/img/hero-tienda.jpeg';
+import heroImg from '@/img/png/fondo-hero.png';
 
 interface Categoria {
     id: number;
@@ -70,6 +70,9 @@ const props = defineProps<{
 }>();
 
 const animatingProductId = ref<number | null>(null);
+const activeFaq = ref<number | null>(0);
+const quantities = ref<Record<number, number>>({});
+
 const toast = ref<{ show: boolean; text: string }>({
     show: false,
     text: '',
@@ -87,33 +90,84 @@ const featuredProducts = computed(() => {
         ? props.destacados
         : props.productos ?? [];
 
-    return source.slice(0, 6);
+    return source.slice(0, 2);
 });
 
 const processSteps = [
     {
-        title: 'Filtro de sedimentos',
-        text: 'Ayuda a retener partículas visibles y sólidos suspendidos.',
+        number: '01',
+        icon: '◌',
+        title: 'Sedimentos',
+        subtitle: 'Filtro de sedimentos',
+        text: 'Retiene partículas visibles y sólidos suspendidos antes de continuar con las siguientes etapas.',
     },
     {
-        title: 'Filtro de zeolita',
-        text: 'Apoya en la reducción de impurezas presentes en el agua.',
+        number: '02',
+        icon: '◆',
+        title: 'Zeolita',
+        subtitle: 'Filtro de zeolita',
+        text: 'Ayuda a reducir impurezas y mejora el tratamiento inicial del agua.',
     },
     {
+        number: '03',
+        icon: '●',
         title: 'Carbón activado',
-        text: 'Contribuye a mejorar olor, color y sabor del agua.',
+        subtitle: 'Filtro de carbón activado',
+        text: 'Contribuye a mejorar olor, color y sabor para una experiencia más agradable.',
     },
     {
-        title: 'Filtro suavizador',
-        text: 'Ayuda a disminuir dureza y minerales que afectan la calidad.',
+        number: '04',
+        icon: '≈',
+        title: 'Suavizador',
+        subtitle: 'Filtro suavizador',
+        text: 'Disminuye dureza y minerales que pueden afectar la calidad del agua.',
     },
     {
+        number: '05',
+        icon: '↻',
         title: 'Ósmosis inversa',
-        text: 'Proceso clave para una purificación más profunda.',
+        subtitle: 'Sistema de ósmosis inversa',
+        text: 'Proceso clave para una purificación más profunda y confiable.',
     },
     {
-        title: 'Filtro pulidor',
-        text: 'Etapa final para entregar agua con mejor presentación y sabor.',
+        number: '06',
+        icon: '✦',
+        title: 'Pulidor',
+        subtitle: 'Filtro pulidor',
+        text: 'Etapa final para entregar agua con mejor presentación, claridad y sabor.',
+    },
+];
+
+const buySteps = [
+    {
+        number: '01',
+        title: 'Elige tus productos',
+        text: 'Selecciona agua, hielo o promociones desde el catálogo.',
+    },
+    {
+        number: '02',
+        title: 'Realiza tu pago',
+        text: 'Confirma tu compra con pago anticipado en línea.',
+    },
+    {
+        number: '03',
+        title: 'Pedido confirmado',
+        text: 'Recibirás una notificación por correo cuando tu pedido quede registrado.',
+    },
+    {
+        number: '04',
+        title: 'Preparación del pedido',
+        text: 'Te avisaremos cuando el equipo de Punto Polar comience a preparar tu compra.',
+    },
+    {
+        number: '05',
+        title: 'Listo para recoger',
+        text: 'Recibirás un correo cuando tu pedido esté listo y puedas pasar por él.',
+    },
+    {
+        number: '06',
+        title: 'Recoge en Punto Polar',
+        text: 'Presenta tu código de recolección y recibe tus productos.',
     },
 ];
 
@@ -133,6 +187,10 @@ const faqs = [
     {
         question: '¿Qué productos venden?',
         answer: 'Agua purificada en presentaciones de 20 L, 10 L y 4 L; además de hielo en presentaciones de 5 kg y 3 kg.',
+    },
+    {
+        question: '¿Cómo sé que mi pedido ya está confirmado?',
+        answer: 'Después del pago, el sistema registra el pedido y podrás consultar el estado desde tu cuenta.',
     },
 ];
 
@@ -185,11 +243,31 @@ function formatPrice(value: number | string | null | undefined) {
 function showToast(text: string) {
     toast.value = { show: true, text };
 
-    window.clearTimeout((showToast as typeof showToast & { timer?: number }).timer);
+    window.clearTimeout(
+        (showToast as typeof showToast & { timer?: number }).timer,
+    );
+
     (showToast as typeof showToast & { timer?: number }).timer =
         window.setTimeout(() => {
             toast.value.show = false;
-        }, 2200);
+        }, 3500);
+}
+
+function getQuantity(producto: Producto) {
+    return quantities.value[producto.id] ?? 1;
+}
+
+function increaseQuantity(producto: Producto) {
+    const current = getQuantity(producto);
+    const max = producto.stock > 0 ? producto.stock : current + 1;
+
+    quantities.value[producto.id] = Math.min(current + 1, max);
+}
+
+function decreaseQuantity(producto: Producto) {
+    const current = getQuantity(producto);
+
+    quantities.value[producto.id] = Math.max(current - 1, 1);
 }
 
 function triggerBubble(productId: number) {
@@ -203,24 +281,32 @@ function triggerBubble(productId: number) {
 }
 
 function addToCart(producto: Producto) {
+    const cantidad = getQuantity(producto);
+
     triggerBubble(producto.id);
 
     router.post(
         '/carrito/agregar',
         {
             producto_id: producto.id,
-            cantidad: 1,
+            cantidad,
         },
         {
             preserveScroll: true,
             onSuccess: () => {
-                showToast(`"${producto.nombre}" se agregó al carrito`);
+                showToast(
+                    `${cantidad} ${cantidad === 1 ? 'pieza' : 'piezas'} de "${producto.nombre}" se agregaron al carrito`,
+                );
             },
             onError: () => {
                 showToast('No se pudo agregar el producto al carrito');
             },
         },
     );
+}
+
+function toggleFaq(index: number) {
+    activeFaq.value = activeFaq.value === index ? null : index;
 }
 
 function sendContactEmail() {
@@ -251,198 +337,251 @@ onBeforeUnmount(() => {
         <div class="overflow-hidden bg-white text-slate-950">
             <!-- HERO -->
             <section
-                class="relative min-h-screen overflow-hidden bg-[#eaf9ff] px-3 pb-8 pt-24 sm:px-5 sm:pt-28 lg:px-8 lg:pt-32"
+                class="relative min-h-[92vh] overflow-hidden bg-[#062A5E] px-4 pb-10 pt-24 sm:px-6 sm:pt-28 lg:min-h-screen lg:px-8 lg:pt-30"
             >
                 <div class="absolute inset-0">
-                    <video
-                        class="h-full w-full object-cover opacity-70"
-                        autoplay
-                        muted
-                        loop
-                        playsinline
-                        poster="/img/punto-polar-hero-poster.jpg"
-                    >
-                        <source
-                            src="/videos/punto-polar-agua-hielo.mp4"
-                            type="video/mp4"
-                        />
-                    </video>
+                    <img
+                        :src="heroImg"
+                        alt="Agua purificada y hielo Punto Polar"
+                        class="h-full w-full object-cover object-center"
+                    />
 
                     <div
-                        class="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(48,190,239,0.24),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(6,42,94,0.20),transparent_28%),linear-gradient(180deg,rgba(255,255,255,0.66)_0%,rgba(234,249,255,0.70)_46%,rgba(255,255,255,0.92)_100%)]"
+                        class="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,42,94,0.90)_0%,rgba(6,42,94,0.72)_38%,rgba(6,42,94,0.30)_72%,rgba(255,255,255,0.16)_100%)]"
+                    />
+
+                    <div
+                        class="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(48,190,239,0.28),transparent_32%),radial-gradient(circle_at_82%_18%,rgba(255,255,255,0.18),transparent_28%)]"
                     />
                 </div>
 
                 <div
-                    class="relative mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-[1500px] items-center"
+                    class="relative mx-auto flex min-h-[calc(92vh-8rem)] w-full max-w-[1500px] items-start lg:min-h-[calc(100vh-8rem)]"
                 >
                     <div
                         data-reveal
-                        class="reveal relative w-full overflow-hidden rounded-[42px] border border-white/45 bg-white/24 p-5 shadow-[0_34px_100px_rgba(6,42,94,0.20)] backdrop-blur-2xl sm:p-8 lg:rounded-[56px] lg:p-12"
+                        class="reveal max-w-5xl pb-8 pt-8 text-white sm:pt-10 lg:pt-14"
                     >
-                        <div
-                            class="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(48,190,239,0.28),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.36),rgba(255,255,255,0.12))]"
+                        <img
+                            :src="logo"
+                            alt="Punto Polar"
+                            class="mb-7 h-24 w-auto object-contain drop-shadow-[0_22px_50px_rgba(0,0,0,0.26)] sm:h-28 lg:h-32"
                         />
 
-                        <div
-                            class="relative grid min-h-[620px] gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center"
+                        <span
+                            class="inline-flex items-center gap-3 rounded-full border border-white/28 bg-white/14 px-5 py-3 text-xs font-black uppercase tracking-[0.22em] text-white/85 shadow-[0_18px_40px_rgba(0,0,0,0.14)] backdrop-blur-xl sm:text-sm"
                         >
-                            <div class="max-w-4xl">
-                                <div class="flex items-center gap-4">
-                                    <img
-                                        :src="logo"
-                                        alt="Punto Polar"
-                                        class="h-16 w-auto object-contain drop-shadow-[0_14px_30px_rgba(6,42,94,0.16)] sm:h-20"
-                                    />
+                            Agua purificada y hielo
+                            <strong
+                                class="rounded-full bg-[#30BEEF] px-3 py-1 text-white shadow-[0_12px_24px_rgba(48,190,239,0.30)]"
+                            >
+                                24/7
+                            </strong>
+                        </span>
 
-                                    <span
-                                        class="hidden rounded-full bg-white/50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#062A5E] backdrop-blur-xl sm:inline-flex"
-                                    >
-                                        Agua y hielo 24/7
-                                    </span>
-                                </div>
+                        <h1
+                            class="mt-7 max-w-5xl text-5xl font-black leading-[0.92] tracking-tight text-white sm:text-6xl lg:text-7xl xl:text-8xl"
+                        >
+                            Frescura disponible todos los días.
+                        </h1>
 
-                                <h1
-                                    class="mt-10 max-w-5xl text-5xl font-black leading-[0.94] tracking-tight text-[#062A5E] sm:text-6xl lg:text-7xl xl:text-8xl"
+                        <p
+                            class="mt-7 max-w-2xl text-base leading-8 text-white/78 sm:text-lg lg:text-xl"
+                        >
+                            Compra agua purificada y hielo en línea, paga de
+                            forma anticipada y recoge en Punto Polar cuando lo
+                            necesites.
+                        </p>
+
+                        <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+                            <Link
+                                href="/productos"
+                                class="inline-flex h-14 items-center justify-center rounded-full bg-white px-7 text-sm font-black text-[#062A5E] shadow-[0_18px_40px_rgba(0,0,0,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#30BEEF] hover:text-white"
+                            >
+                                Comprar ahora
+                            </Link>
+
+                            <a
+                                href="#proceso-filtrado"
+                                class="inline-flex h-14 items-center justify-center rounded-full border border-white/25 bg-white/12 px-7 text-sm font-black text-white shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white/22"
+                            >
+                                Ver proceso de filtrado
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PROCESO DE FILTRADO -->
+            <section
+                id="proceso-filtrado"
+                class="relative overflow-hidden bg-white px-4 py-16 sm:px-6 lg:px-8 lg:py-24"
+            >
+                <div
+                    class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(48,190,239,0.13),transparent_30%),radial-gradient(circle_at_90%_20%,rgba(6,42,94,0.08),transparent_28%)]"
+                />
+
+                <div class="relative mx-auto w-full max-w-[1500px]">
+                    <div data-reveal class="reveal text-center">
+                        <p
+                            class="text-xs font-black uppercase tracking-[0.34em] text-[#062A5E]/45"
+                        >
+                            Sistema de purificación
+                        </p>
+
+                        <h2
+                            class="mx-auto mt-5 max-w-5xl text-5xl font-black leading-[0.94] tracking-tight text-[#062A5E] md:text-7xl"
+                        >
+                            Seis etapas para darte más confianza.
+                        </h2>
+
+                        <p
+                            class="mx-auto mt-6 max-w-3xl text-base leading-8 text-slate-600 md:text-lg"
+                        >
+                            Nuestro tren de filtrado combina sedimentos,
+                            zeolita, carbón activado, suavizador, ósmosis
+                            inversa y filtro pulidor para cuidar la calidad del
+                            agua.
+                        </p>
+                    </div>
+
+                    <div class="mt-14 grid gap-6 lg:grid-cols-3">
+                        <article
+                            v-for="(step, index) in processSteps"
+                            :key="step.title"
+                            data-reveal
+                            class="reveal group relative min-h-[300px] overflow-hidden rounded-[34px] border border-slate-200 bg-white/82 p-7 shadow-[0_22px_70px_rgba(6,42,94,0.08)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_28px_90px_rgba(6,42,94,0.14)]"
+                            :class="`reveal-delay-${Math.min(index, 3)}`"
+                        >
+                            <span
+                                class="pointer-events-none absolute -top-8 left-5 text-[9rem] font-black leading-none text-slate-100 transition duration-300 group-hover:text-[#30BEEF]/10 md:text-[10rem]"
+                            >
+                                {{ step.number }}
+                            </span>
+
+                            <div class="relative z-10">
+                                <div
+                                    class="flex h-16 w-16 items-center justify-center rounded-[24px] bg-[#eaf9ff] text-3xl font-black text-[#062A5E] shadow-inner"
                                 >
-                                    Frescura disponible todos los días.
-                                </h1>
+                                    {{ step.icon }}
+                                </div>
 
                                 <p
-                                    class="mt-7 max-w-2xl text-base leading-8 text-slate-700 sm:text-lg lg:text-xl"
+                                    class="mt-8 text-xs font-black uppercase tracking-[0.22em] text-[#30BEEF]"
                                 >
-                                    Agua purificada y hielo listos cuando los
-                                    necesites. Compra en línea, paga de forma
-                                    anticipada y recoge en Punto Polar.
+                                    {{ step.subtitle }}
                                 </p>
 
-                                <div class="mt-9 flex flex-col gap-3 sm:flex-row">
-                                    <Link
-                                        href="/productos"
-                                        class="inline-flex h-14 items-center justify-center rounded-full bg-[#062A5E] px-7 text-sm font-black text-white shadow-[0_18px_40px_rgba(6,42,94,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#30BEEF]"
-                                    >
-                                        Comprar ahora
-                                    </Link>
-
-                                    <a
-                                        href="#proceso-filtrado"
-                                        class="inline-flex h-14 items-center justify-center rounded-full border border-[#062A5E]/10 bg-white/45 px-7 text-sm font-black text-[#062A5E] shadow-sm backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:bg-white"
-                                    >
-                                        Ver proceso de filtrado
-                                    </a>
-                                </div>
-                            </div>
-
-                            <div
-                                data-reveal
-                                class="reveal reveal-delay-1 relative hidden min-h-[520px] lg:block"
-                            >
-                                <div
-                                    class="water-capsule absolute right-0 top-1/2 h-[520px] w-[320px] -translate-y-1/2 rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,0.70),rgba(48,190,239,0.34),rgba(6,42,94,0.24))] shadow-[inset_0_0_80px_rgba(255,255,255,0.55),0_30px_90px_rgba(6,42,94,0.22)] backdrop-blur-xl"
-                                />
-
-                                <div
-                                    class="absolute right-[120px] top-[110px] h-24 w-24 rounded-full bg-white/60 blur-2xl"
-                                />
-
-                                <div
-                                    class="absolute right-[70px] top-[64px] h-10 w-10 rounded-full bg-[#30BEEF]/50 blur-xl"
-                                />
-
-                                <div
-                                    class="absolute bottom-[90px] right-[210px] h-16 w-16 rounded-full bg-white/70 blur-2xl"
-                                />
-
-                                <div
-                                    class="absolute right-[46px] top-1/2 h-[390px] w-[210px] -translate-y-1/2 overflow-hidden rounded-full border border-white/35 bg-white/20 shadow-[0_24px_80px_rgba(6,42,94,0.22)] backdrop-blur-2xl"
+                                <h3
+                                    class="mt-3 text-3xl font-black tracking-tight text-[#062A5E]"
                                 >
-                                    <video
-                                        class="h-full w-full object-cover opacity-90"
-                                        autoplay
-                                        muted
-                                        loop
-                                        playsinline
-                                        poster="/img/punto-polar-hero-poster.jpg"
-                                    >
-                                        <source
-                                            src="/videos/punto-polar-agua-hielo.mp4"
-                                            type="video/mp4"
-                                        />
-                                    </video>
+                                    {{ step.title }}
+                                </h3>
 
-                                    <div
-                                        class="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.18),rgba(48,190,239,0.20),rgba(6,42,94,0.34))]"
-                                    />
-                                </div>
-
-                                <div
-                                    class="absolute bottom-14 left-0 max-w-[330px] rounded-[30px] border border-white/35 bg-white/40 p-5 shadow-[0_22px_70px_rgba(6,42,94,0.16)] backdrop-blur-2xl"
-                                >
-                                    <p
-                                        class="text-xs font-black uppercase tracking-[0.22em] text-[#062A5E]/70"
-                                    >
-                                        Punto Polar
-                                    </p>
-                                    <p
-                                        class="mt-2 text-2xl font-black leading-tight text-[#062A5E]"
-                                    >
-                                        Agua purificada y hielo para tu casa o negocio.
-                                    </p>
-                                </div>
+                                <p class="mt-4 text-sm leading-7 text-slate-600">
+                                    {{ step.text }}
+                                </p>
                             </div>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CÓMO COMPRAR -->
+            <section
+                id="como-comprar"
+                class="relative overflow-hidden px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-24"
+                :style="{
+                    backgroundImage:
+                        'linear-gradient(135deg, rgba(6,42,94,0.94), rgba(6,42,94,0.82), rgba(48,190,239,0.64)), url(/img/punto-polar-como-comprar-bg.jpg)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                }"
+            >
+                <div class="mx-auto w-full max-w-[1500px]">
+                    <div data-reveal class="reveal max-w-4xl">
+                        <span
+                            class="inline-flex rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/70"
+                        >
+                            Cómo comprar
+                        </span>
+
+                        <h2
+                            class="mt-4 text-4xl font-black tracking-tight md:text-6xl"
+                        >
+                            Compra en línea y sigue cada etapa.
+                        </h2>
+
+                        <p class="mt-4 max-w-2xl text-base leading-7 text-white/72">
+                            Desde que confirmas tu pedido hasta que está listo
+                            para recoger, recibirás actualizaciones para saber
+                            cómo va tu compra.
+                        </p>
+                    </div>
+
+                    <div class="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        <div
+                            v-for="(step, index) in buySteps"
+                            :key="step.title"
+                            data-reveal
+                            class="reveal rounded-[30px] border border-white/14 bg-white/10 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.14)] backdrop-blur-xl"
+                            :class="`reveal-delay-${Math.min(index, 3)}`"
+                        >
+                            <p class="text-4xl font-black text-[#30BEEF]">
+                                {{ step.number }}
+                            </p>
+                            <h3 class="mt-5 text-xl font-black">
+                                {{ step.title }}
+                            </h3>
+                            <p class="mt-3 text-sm leading-6 text-white/70">
+                                {{ step.text }}
+                            </p>
                         </div>
                     </div>
                 </div>
             </section>
 
             <!-- PRODUCTOS -->
-            <section id="productos-destacados" class="px-4 py-16 sm:px-6 lg:px-8 lg:py-20">
+            <section
+                id="productos-destacados"
+                class="px-4 py-16 sm:px-6 lg:px-8 lg:py-24"
+            >
                 <div class="mx-auto w-full max-w-[1500px]">
-                    <div
-                        data-reveal
-                        class="reveal mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
-                    >
-                        <div>
-                            <span
-                                class="inline-flex rounded-full bg-[#30BEEF]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#062A5E]"
-                            >
-                                Productos
-                            </span>
-
-                            <h2
-                                class="mt-4 max-w-4xl text-5xl font-black leading-[0.96] tracking-tight text-[#062A5E] md:text-7xl"
-                            >
-                                Agua y hielo para cada momento.
-                            </h2>
-                        </div>
-
-                        <Link
-                            href="/productos"
-                            class="inline-flex h-14 items-center justify-center rounded-full bg-[#062A5E] px-6 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#30BEEF]"
+                    <div data-reveal class="reveal mb-10 max-w-5xl">
+                        <span
+                            class="inline-flex rounded-full bg-[#30BEEF]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#062A5E]"
                         >
-                            Ver catálogo completo
-                        </Link>
+                            Más pedidos
+                        </span>
+
+                        <h2
+                            class="mt-4 max-w-4xl text-5xl font-black leading-[0.96] tracking-tight text-[#062A5E] md:text-7xl"
+                        >
+                            Nuestros productos más pedidos.
+                        </h2>
+
+                        <p
+                            class="mt-5 max-w-3xl text-base leading-8 text-slate-600 md:text-lg"
+                        >
+                            Agua y hielo listos para resolver lo esencial: tu
+                            garrafón para el día a día y hielo para conservar,
+                            compartir o vender.
+                        </p>
                     </div>
 
                     <div
                         v-if="featuredProducts.length"
-                        class="-mx-4 flex gap-5 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+                        class="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
                     >
                         <article
                             v-for="(producto, index) in featuredProducts"
                             :key="producto.id"
                             data-reveal
-                            class="reveal group flex min-h-[520px] w-[310px] shrink-0 snap-start flex-col overflow-hidden rounded-[34px] bg-white shadow-[0_18px_54px_rgba(6,42,94,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(6,42,94,0.12)] sm:w-[360px]"
-                            :class="[
-                                index === 0 ? 'lg:w-[460px]' : '',
-                                index === 2 ? 'lg:w-[430px]' : '',
-                                index === 4 ? 'lg:w-[390px]' : '',
-                                `reveal-delay-${Math.min(index, 3)}`,
-                            ]"
+                            class="reveal group flex min-h-[500px] flex-col overflow-hidden rounded-[34px] bg-white shadow-[0_18px_54px_rgba(6,42,94,0.08)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(6,42,94,0.12)]"
+                            :class="`reveal-delay-${Math.min(index, 3)}`"
                         >
                             <div
-                                class="relative overflow-hidden bg-[#eaf9ff]"
-                                :class="index % 2 === 0 ? 'h-[300px] rounded-b-[42px]' : 'h-[250px] rounded-b-[120px]'"
+                                class="relative h-[260px] overflow-hidden rounded-b-[42px] bg-[#eaf9ff] sm:h-[290px] xl:h-[300px]"
                             >
                                 <img
                                     :src="producto.imagen_principal || heroImg"
@@ -454,11 +593,16 @@ onBeforeUnmount(() => {
                                     class="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,42,94,0.02)_0%,rgba(6,42,94,0.36)_100%)]"
                                 />
 
-                                <div class="absolute left-4 top-4 flex flex-wrap gap-2">
+                                <div
+                                    class="absolute left-4 top-4 flex flex-wrap gap-2"
+                                >
                                     <span
                                         class="rounded-full bg-white/90 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-[#062A5E]"
                                     >
-                                        {{ producto.categoria?.nombre || 'Producto' }}
+                                        {{
+                                            producto.categoria?.nombre ||
+                                            'Producto'
+                                        }}
                                     </span>
 
                                     <span
@@ -491,16 +635,28 @@ onBeforeUnmount(() => {
                                 </p>
 
                                 <div class="mt-auto pt-5">
-                                    <div class="flex items-end justify-between gap-4">
+                                    <div
+                                        class="flex items-end justify-between gap-4"
+                                    >
                                         <div>
                                             <p
-                                                v-if="producto.precio_original && producto.precio_original > producto.precio"
+                                                v-if="
+                                                    producto.precio_original &&
+                                                    producto.precio_original >
+                                                        producto.precio
+                                                "
                                                 class="text-sm text-slate-400 line-through"
                                             >
-                                                {{ formatPrice(producto.precio_original) }}
+                                                {{
+                                                    formatPrice(
+                                                        producto.precio_original,
+                                                    )
+                                                }}
                                             </p>
 
-                                            <p class="text-3xl font-black text-[#062A5E]">
+                                            <p
+                                                class="text-3xl font-black text-[#062A5E]"
+                                            >
                                                 {{ formatPrice(producto.precio) }}
                                             </p>
                                         </div>
@@ -508,26 +664,56 @@ onBeforeUnmount(() => {
                                         <p
                                             class="rounded-full bg-[#eaf9ff] px-3 py-1 text-xs font-black text-[#062A5E]"
                                         >
-                                            {{ producto.stock > 0 ? 'Disponible' : 'Sin stock' }}
+                                            {{
+                                                producto.stock > 0
+                                                    ? 'Disponible'
+                                                    : 'Sin stock'
+                                            }}
                                         </p>
                                     </div>
 
-                                    <div class="mt-5 grid grid-cols-2 gap-2">
-                                        <Link
-                                            :href="`/productos/${producto.slug}`"
-                                            class="inline-flex h-12 items-center justify-center rounded-full border border-[#062A5E]/12 bg-white px-4 text-sm font-black text-[#062A5E] transition-all duration-300 hover:bg-[#eaf9ff]"
+                                    <div
+                                        class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr]"
+                                    >
+                                        <div
+                                            class="inline-flex h-12 w-full items-center justify-between rounded-full border border-[#062A5E]/12 bg-[#f6fbff] p-1 sm:w-auto"
                                         >
-                                            Ver detalle
-                                        </Link>
+                                            <button
+                                                type="button"
+                                                class="flex h-10 w-10 items-center justify-center rounded-full text-lg font-black text-[#062A5E] transition hover:bg-white"
+                                                aria-label="Disminuir cantidad"
+                                                @click="decreaseQuantity(producto)"
+                                            >
+                                                −
+                                            </button>
+
+                                            <span
+                                                class="flex h-10 min-w-10 items-center justify-center px-2 text-sm font-black text-[#062A5E]"
+                                            >
+                                                {{ getQuantity(producto) }}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                class="flex h-10 w-10 items-center justify-center rounded-full text-lg font-black text-[#062A5E] transition hover:bg-white"
+                                                aria-label="Aumentar cantidad"
+                                                @click="increaseQuantity(producto)"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
 
                                         <button
                                             type="button"
-                                            class="relative inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#30BEEF_0%,#062A5E_100%)] px-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(48,190,239,0.26)] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white"
+                                            class="relative inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-[linear-gradient(135deg,#30BEEF_0%,#062A5E_100%)] px-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_rgba(48,190,239,0.26)] disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-white"
                                             :disabled="producto.stock < 1"
                                             @click="addToCart(producto)"
                                         >
                                             <span
-                                                v-if="animatingProductId === producto.id"
+                                                v-if="
+                                                    animatingProductId ===
+                                                    producto.id
+                                                "
                                                 class="pointer-events-none absolute inset-0"
                                             >
                                                 <span class="bubble bubble-1" />
@@ -537,13 +723,65 @@ onBeforeUnmount(() => {
                                                 <span class="bubble bubble-5" />
                                             </span>
 
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                class="relative z-10 h-5 w-5 fill-none stroke-current"
+                                                stroke-width="2"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M3 3h2l2.2 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 7H6"
+                                                />
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M10 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z"
+                                                />
+                                            </svg>
+
                                             <span class="relative z-10">
-                                                {{ producto.stock < 1 ? 'Sin stock' : 'Agregar' }}
+                                                {{
+                                                    producto.stock < 1
+                                                        ? 'Sin stock'
+                                                        : 'Agregar'
+                                                }}
                                             </span>
                                         </button>
                                     </div>
                                 </div>
                             </div>
+                        </article>
+
+                        <article
+                            data-reveal
+                            class="reveal reveal-delay-2 flex min-h-[500px] flex-col justify-between overflow-hidden rounded-[34px] bg-[#062A5E] p-7 text-white shadow-[0_24px_70px_rgba(6,42,94,0.20)]"
+                        >
+                            <div>
+                                <p
+                                    class="text-xs font-black uppercase tracking-[0.22em] text-white/50"
+                                >
+                                    Catálogo completo
+                                </p>
+
+                                <h3
+                                    class="mt-5 text-4xl font-black leading-tight tracking-tight"
+                                >
+                                    Explora todas las presentaciones.
+                                </h3>
+
+                                <p class="mt-5 text-sm leading-7 text-white/70">
+                                    Encuentra agua, hielo y promociones
+                                    disponibles para comprar en línea.
+                                </p>
+                            </div>
+
+                            <Link
+                                href="/productos"
+                                class="mt-8 inline-flex h-14 items-center justify-center rounded-full bg-white px-6 text-sm font-black text-[#062A5E] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#30BEEF] hover:text-white"
+                            >
+                                Ver catálogo completo →
+                            </Link>
                         </article>
                     </div>
 
@@ -564,155 +802,21 @@ onBeforeUnmount(() => {
                 </div>
             </section>
 
-            <!-- CÓMO COMPRAR -->
-            <section
-                id="como-comprar"
-                class="bg-[#062A5E] px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-20"
-            >
-                <div class="mx-auto w-full max-w-[1500px]">
-                    <div
-                        data-reveal
-                        class="reveal grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end"
-                    >
-                        <div>
-                            <span
-                                class="inline-flex rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/70"
-                            >
-                                Cómo comprar
-                            </span>
-
-                            <h2 class="mt-4 text-4xl font-black tracking-tight md:text-6xl">
-                                Elige, paga y recoge.
-                            </h2>
-
-                            <p class="mt-4 max-w-xl text-base leading-7 text-white/70">
-                                El sistema está pensado para que puedas hacer tu
-                                pedido en línea y pasar por tus productos a
-                                Punto Polar.
-                            </p>
-                        </div>
-
-                        <div class="grid gap-4 md:grid-cols-3">
-                            <div
-                                data-reveal
-                                class="reveal reveal-delay-1 rounded-[30px] bg-white/10 p-6 backdrop-blur-xl"
-                            >
-                                <p class="text-4xl font-black text-[#30BEEF]">01</p>
-                                <h3 class="mt-5 text-xl font-black">
-                                    Elige tus productos
-                                </h3>
-                                <p class="mt-3 text-sm leading-6 text-white/70">
-                                    Selecciona agua, hielo o promociones desde el
-                                    catálogo.
-                                </p>
-                            </div>
-
-                            <div
-                                data-reveal
-                                class="reveal reveal-delay-2 rounded-[30px] bg-white/10 p-6 backdrop-blur-xl"
-                            >
-                                <p class="text-4xl font-black text-[#30BEEF]">02</p>
-                                <h3 class="mt-5 text-xl font-black">
-                                    Realiza tu pago
-                                </h3>
-                                <p class="mt-3 text-sm leading-6 text-white/70">
-                                    Confirma tu compra con pago anticipado en
-                                    línea.
-                                </p>
-                            </div>
-
-                            <div
-                                data-reveal
-                                class="reveal reveal-delay-3 rounded-[30px] bg-white/10 p-6 backdrop-blur-xl"
-                            >
-                                <p class="text-4xl font-black text-[#30BEEF]">03</p>
-                                <h3 class="mt-5 text-xl font-black">
-                                    Recoge en Punto Polar
-                                </h3>
-                                <p class="mt-3 text-sm leading-6 text-white/70">
-                                    Presenta tu código de recolección y recibe
-                                    tus productos.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- PROCESO DE FILTRADO -->
-            <section
-                id="proceso-filtrado"
-                class="px-4 py-16 sm:px-6 lg:px-8 lg:py-20"
-            >
-                <div class="mx-auto w-full max-w-[1500px]">
-                    <div
-                        class="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"
-                    >
-                        <div data-reveal class="reveal lg:sticky lg:top-32">
-                            <span
-                                class="inline-flex rounded-full bg-[#30BEEF]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#062A5E]"
-                            >
-                                Proceso de filtrado
-                            </span>
-
-                            <h2
-                                class="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-6xl"
-                            >
-                                Confianza en cada llenado.
-                            </h2>
-
-                            <p class="mt-4 max-w-xl text-base leading-7 text-slate-600">
-                                Nuestro sistema incluye etapas de purificación
-                                como filtración de sedimentos, zeolita, carbón
-                                activado, suavizador, ósmosis inversa y filtro
-                                pulidor.
-                            </p>
-
-                            <div
-                                class="mt-6 rounded-[30px] bg-[#eaf9ff] p-5 text-sm leading-7 text-slate-700"
-                            >
-                                <strong class="text-[#062A5E]">
-                                    Próximamente:
-                                </strong>
-                                una página independiente para explicar con más
-                                detalle cada etapa del proceso.
-                            </div>
-                        </div>
-
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <article
-                                v-for="(step, index) in processSteps"
-                                :key="step.title"
-                                data-reveal
-                                class="reveal rounded-[32px] border border-slate-200 bg-white p-6 shadow-[0_18px_54px_rgba(6,42,94,0.07)]"
-                                :class="`reveal-delay-${Math.min(index, 3)}`"
-                            >
-                                <div
-                                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#30BEEF]/10 text-lg font-black text-[#062A5E]"
-                                >
-                                    {{ index + 1 }}
-                                </div>
-
-                                <h3 class="mt-5 text-xl font-black text-slate-950">
-                                    {{ step.title }}
-                                </h3>
-
-                                <p class="mt-3 text-sm leading-7 text-slate-600">
-                                    {{ step.text }}
-                                </p>
-                            </article>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
             <!-- FAQ -->
             <section
                 id="preguntas-frecuentes"
-                class="bg-[#f6fbff] px-4 py-16 sm:px-6 lg:px-8 lg:py-20"
+                class="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8 lg:py-24"
+                :style="{
+                    backgroundImage:
+                        'linear-gradient(180deg, rgba(246,251,255,0.96), rgba(255,255,255,0.96)), url(/img/png/faq-bg.png)',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                }"
             >
-                <div class="mx-auto w-full max-w-[1200px]">
-                    <div data-reveal class="reveal text-center">
+                <div
+                    class="mx-auto grid w-full max-w-[1300px] gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"
+                >
+                    <div data-reveal class="reveal">
                         <span
                             class="inline-flex rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#062A5E] shadow-sm"
                         >
@@ -720,27 +824,65 @@ onBeforeUnmount(() => {
                         </span>
 
                         <h2
-                            class="mt-4 text-4xl font-black tracking-tight text-slate-950 md:text-6xl"
+                            class="mt-4 text-4xl font-black tracking-tight text-[#062A5E] md:text-6xl"
                         >
-                            Antes de comprar.
+                            Resuelve tus dudas antes de comprar.
                         </h2>
+
+                        <p
+                            class="mt-5 max-w-xl text-base leading-8 text-slate-600"
+                        >
+                            Dejamos las respuestas ocultas para que la sección
+                            sea más limpia y puedas abrir solo lo que necesitas.
+                        </p>
                     </div>
 
-                    <div class="mt-10 grid gap-4">
+                    <div class="space-y-3">
                         <article
                             v-for="(faq, index) in faqs"
                             :key="faq.question"
                             data-reveal
-                            class="reveal rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_54px_rgba(6,42,94,0.06)]"
+                            class="reveal overflow-hidden rounded-[28px] border border-white/70 bg-white/70 shadow-[0_18px_54px_rgba(6,42,94,0.07)] backdrop-blur-xl"
                             :class="`reveal-delay-${Math.min(index, 3)}`"
                         >
-                            <h3 class="text-xl font-black text-[#062A5E]">
-                                {{ faq.question }}
-                            </h3>
+                            <button
+                                type="button"
+                                class="flex w-full items-center justify-between gap-4 px-5 py-5 text-left md:px-6"
+                                @click="toggleFaq(index)"
+                            >
+                                <span
+                                    class="text-lg font-black text-[#062A5E] md:text-xl"
+                                >
+                                    {{ faq.question }}
+                                </span>
 
-                            <p class="mt-3 text-sm leading-7 text-slate-600">
-                                {{ faq.answer }}
-                            </p>
+                                <span
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eaf9ff] text-xl font-black text-[#062A5E] transition-transform duration-300"
+                                    :class="
+                                        activeFaq === index ? 'rotate-45' : ''
+                                    "
+                                >
+                                    +
+                                </span>
+                            </button>
+
+                            <Transition
+                                enter-active-class="transition duration-300 ease-out"
+                                enter-from-class="max-h-0 opacity-0"
+                                enter-to-class="max-h-40 opacity-100"
+                                leave-active-class="transition duration-200 ease-in"
+                                leave-from-class="max-h-40 opacity-100"
+                                leave-to-class="max-h-0 opacity-0"
+                            >
+                                <div
+                                    v-if="activeFaq === index"
+                                    class="overflow-hidden px-5 pb-5 md:px-6"
+                                >
+                                    <p class="text-sm leading-7 text-slate-600">
+                                        {{ faq.answer }}
+                                    </p>
+                                </div>
+                            </Transition>
                         </article>
                     </div>
                 </div>
@@ -749,33 +891,52 @@ onBeforeUnmount(() => {
             <!-- CONTACTO -->
             <section
                 id="contacto-home"
-                class="px-4 py-16 sm:px-6 lg:px-8 lg:py-20"
+                class="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8 lg:py-24"
             >
+                <div class="absolute inset-0">
+                    <img
+                        :src="heroImg"
+                        alt=""
+                        class="h-full w-full object-cover opacity-45"
+                    />
+                    <div
+                        class="absolute inset-0 bg-[linear-gradient(135deg,rgba(6,42,94,0.92)_0%,rgba(11,95,165,0.78)_52%,rgba(48,190,239,0.66)_100%)]"
+                    />
+                </div>
+
                 <div
-                    class="mx-auto grid w-full max-w-[1500px] gap-10 rounded-[42px] bg-[linear-gradient(135deg,#062A5E_0%,#0B5FA5_52%,#30BEEF_100%)] p-6 text-white shadow-[0_30px_90px_rgba(6,42,94,0.20)] md:p-10 lg:grid-cols-[0.9fr_1.1fr]"
+                    class="relative mx-auto grid w-full max-w-[1500px] gap-10 rounded-[42px] border border-white/18 bg-white/10 p-6 text-white shadow-[0_30px_90px_rgba(6,42,94,0.26)] backdrop-blur-xl md:p-10 lg:grid-cols-[0.9fr_1.1fr]"
                 >
                     <div data-reveal class="reveal">
                         <span
-                            class="inline-flex rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/70"
+                            class="inline-flex rounded-full bg-white/12 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/70"
                         >
                             Contacto
                         </span>
 
-                        <h2 class="mt-4 text-4xl font-black tracking-tight md:text-6xl">
+                        <h2
+                            class="mt-4 text-4xl font-black tracking-tight md:text-6xl"
+                        >
                             Quejas, dudas o sugerencias.
                         </h2>
 
-                        <p class="mt-4 max-w-xl text-base leading-8 text-white/75">
+                        <p
+                            class="mt-4 max-w-xl text-base leading-8 text-white/78"
+                        >
                             Escríbenos para reportar alguna situación, compartir
                             una sugerencia o solicitar apoyo relacionado con tu
                             compra.
                         </p>
 
-                        <div class="mt-8 rounded-[30px] bg-white/10 p-5 backdrop-blur-xl">
-                            <p class="text-sm font-black uppercase tracking-[0.18em] text-white/60">
+                        <div
+                            class="mt-8 rounded-[30px] border border-white/18 bg-white/12 p-5 shadow-[0_18px_50px_rgba(0,0,0,0.12)] backdrop-blur-2xl"
+                        >
+                            <p
+                                class="text-sm font-black uppercase tracking-[0.18em] text-white/60"
+                            >
                                 Correo
                             </p>
-                            <p class="mt-2 text-xl font-black">
+                            <p class="mt-2 break-all text-xl font-black">
                                 contactopuntopolar@gmail.com
                             </p>
                         </div>
@@ -783,65 +944,65 @@ onBeforeUnmount(() => {
 
                     <form
                         data-reveal
-                        class="reveal reveal-delay-1 rounded-[34px] bg-white p-5 text-slate-950 shadow-[0_24px_70px_rgba(6,42,94,0.18)] md:p-6"
+                        class="reveal reveal-delay-1 rounded-[34px] border border-white/25 bg-white/12 p-5 text-white shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl md:p-6"
                         @submit.prevent="sendContactEmail"
                     >
                         <div class="grid gap-4 sm:grid-cols-2">
                             <label>
-                                <span class="text-sm font-black text-slate-700">
+                                <span class="text-sm font-black text-white/85">
                                     Nombre
                                 </span>
                                 <input
                                     v-model="contactForm.nombre"
                                     type="text"
                                     required
-                                    class="mt-2 h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm outline-none transition focus:border-[#30BEEF] focus:ring-4 focus:ring-[#30BEEF]/15"
+                                    class="mt-2 h-12 w-full rounded-2xl border border-white/24 bg-white/14 px-4 text-sm text-white outline-none placeholder:text-white/50 transition focus:border-white/60 focus:ring-4 focus:ring-white/12"
                                 />
                             </label>
 
                             <label>
-                                <span class="text-sm font-black text-slate-700">
+                                <span class="text-sm font-black text-white/85">
                                     Teléfono
                                 </span>
                                 <input
                                     v-model="contactForm.telefono"
                                     type="text"
-                                    class="mt-2 h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm outline-none transition focus:border-[#30BEEF] focus:ring-4 focus:ring-[#30BEEF]/15"
+                                    class="mt-2 h-12 w-full rounded-2xl border border-white/24 bg-white/14 px-4 text-sm text-white outline-none placeholder:text-white/50 transition focus:border-white/60 focus:ring-4 focus:ring-white/12"
                                 />
                             </label>
 
                             <label class="sm:col-span-2">
-                                <span class="text-sm font-black text-slate-700">
+                                <span class="text-sm font-black text-white/85">
                                     Correo
                                 </span>
                                 <input
                                     v-model="contactForm.correo"
                                     type="email"
-                                    class="mt-2 h-12 w-full rounded-2xl border border-slate-200 px-4 text-sm outline-none transition focus:border-[#30BEEF] focus:ring-4 focus:ring-[#30BEEF]/15"
+                                    class="mt-2 h-12 w-full rounded-2xl border border-white/24 bg-white/14 px-4 text-sm text-white outline-none placeholder:text-white/50 transition focus:border-white/60 focus:ring-4 focus:ring-white/12"
                                 />
                             </label>
 
                             <label class="sm:col-span-2">
-                                <span class="text-sm font-black text-slate-700">
+                                <span class="text-sm font-black text-white/85">
                                     Mensaje
                                 </span>
                                 <textarea
                                     v-model="contactForm.mensaje"
                                     rows="5"
                                     required
-                                    class="mt-2 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#30BEEF] focus:ring-4 focus:ring-[#30BEEF]/15"
+                                    class="mt-2 w-full rounded-2xl border border-white/24 bg-white/14 px-4 py-3 text-sm text-white outline-none placeholder:text-white/50 transition focus:border-white/60 focus:ring-4 focus:ring-white/12"
                                 />
                             </label>
                         </div>
 
                         <button
                             type="submit"
-                            class="mt-5 inline-flex h-14 w-full items-center justify-center rounded-full bg-[#062A5E] px-6 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#30BEEF]"
+                            class="mt-5 inline-flex h-14 w-full items-center justify-center rounded-full bg-white px-6 text-sm font-black text-[#062A5E] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#30BEEF] hover:text-white"
                         >
                             Enviar mensaje
                         </button>
 
-                        <p class="mt-3 text-xs leading-5 text-slate-500">
+                        <p class="mt-3 text-xs leading-5 text-white/62">
                             Por ahora este formulario abre tu cliente de correo
                             para enviar el mensaje. Después podemos conectarlo
                             directamente a Laravel.
@@ -861,18 +1022,30 @@ onBeforeUnmount(() => {
         >
             <div
                 v-if="toast.show"
-                class="fixed bottom-4 right-4 z-50 flex items-center gap-3 rounded-2xl border border-white/60 bg-white px-4 py-3 shadow-[0_16px_40px_rgba(6,42,94,0.15)]"
+                class="fixed bottom-4 right-4 z-50 w-[calc(100%-2rem)] max-w-md rounded-2xl border border-white/60 bg-white p-4 shadow-[0_16px_40px_rgba(6,42,94,0.15)] sm:right-4 sm:w-auto"
             >
-                <div
-                    class="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#30BEEF]/14 text-[#062A5E]"
-                >
-                    ✓
-                </div>
-                <div>
-                    <p class="text-sm font-black text-slate-900">
-                        Carrito actualizado
-                    </p>
-                    <p class="text-sm text-slate-500">{{ toast.text }}</p>
+                <div class="flex items-start gap-3">
+                    <div
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#30BEEF]/14 text-[#062A5E]"
+                    >
+                        ✓
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-black text-slate-900">
+                            Carrito actualizado
+                        </p>
+                        <p class="mt-1 text-sm text-slate-500">
+                            {{ toast.text }}
+                        </p>
+
+                        <Link
+                            href="/carrito"
+                            class="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-[#062A5E] px-5 text-xs font-black text-white transition hover:bg-[#30BEEF]"
+                        >
+                            Ir a carrito
+                        </Link>
+                    </div>
                 </div>
             </div>
         </Transition>
@@ -903,21 +1076,6 @@ onBeforeUnmount(() => {
 
 .reveal-delay-3 {
     transition-delay: 230ms;
-}
-
-.water-capsule {
-    animation: water-float 6s ease-in-out infinite;
-}
-
-@keyframes water-float {
-    0%,
-    100% {
-        transform: translateY(-50%) translateX(0) rotate(0deg);
-    }
-
-    50% {
-        transform: translateY(-52%) translateX(-10px) rotate(1deg);
-    }
 }
 
 .bubble {
@@ -989,10 +1147,6 @@ onBeforeUnmount(() => {
         opacity: 1;
         transform: none;
         transition: none;
-    }
-
-    .water-capsule {
-        animation: none;
     }
 
     .bubble {
