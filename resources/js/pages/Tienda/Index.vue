@@ -4,6 +4,10 @@ import { Head, Link, router } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import logo from '@/img/punto_polar_logo_navbar.svg';
 import heroImg from '@/img/png/fondo-hero.png';
+import heroImgMobile from '@/img/png/fondo-hero-mobile.png';
+import faqBg from '@/img/png/faq-bg2.png';
+import faqBgMobile from '@/img/png/faq-bg-mobile.png';
+import comoComprarBg from '@/img/png/como-comprar-bg.png';
 
 interface Categoria {
     id: number;
@@ -143,31 +147,37 @@ const buySteps = [
         number: '01',
         title: 'Elige tus productos',
         text: 'Selecciona agua, hielo o promociones desde el catálogo.',
+        image: comoComprarBg,
     },
     {
         number: '02',
         title: 'Realiza tu pago',
         text: 'Confirma tu compra con pago anticipado en línea.',
+        image: comoComprarBg,
     },
     {
         number: '03',
         title: 'Pedido confirmado',
         text: 'Recibirás una notificación por correo cuando tu pedido quede registrado.',
+        image: comoComprarBg,
     },
     {
         number: '04',
-        title: 'Preparación del pedido',
-        text: 'Te avisaremos cuando el equipo de Punto Polar comience a preparar tu compra.',
+        title: 'Preparación',
+        text: 'Te avisaremos cuando el equipo comience a preparar tu compra.',
+        image: comoComprarBg,
     },
     {
         number: '05',
         title: 'Listo para recoger',
-        text: 'Recibirás un correo cuando tu pedido esté listo y puedas pasar por él.',
+        text: 'Recibirás un correo cuando tu pedido esté listo.',
+        image: comoComprarBg,
     },
     {
         number: '06',
         title: 'Recoge en Punto Polar',
         text: 'Presenta tu código de recolección y recibe tus productos.',
+        image: comoComprarBg,
     },
 ];
 
@@ -340,11 +350,17 @@ onBeforeUnmount(() => {
                 class="relative min-h-[92vh] overflow-hidden bg-[#062A5E] px-4 pb-10 pt-24 sm:px-6 sm:pt-28 lg:min-h-screen lg:px-8 lg:pt-30"
             >
                 <div class="absolute inset-0">
-                    <img
-                        :src="heroImg"
-                        alt="Agua purificada y hielo Punto Polar"
-                        class="h-full w-full object-cover object-center"
-                    />
+                    <picture>
+                        <source
+                            media="(max-width: 767px)"
+                            :srcset="heroImgMobile"
+                        />
+                        <img
+                            :src="heroImg"
+                            alt="Agua purificada y hielo Punto Polar"
+                            class="h-full w-full object-cover object-center md:object-center"
+                        />
+                    </picture>
 
                     <div
                         class="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,42,94,0.90)_0%,rgba(6,42,94,0.72)_38%,rgba(6,42,94,0.30)_72%,rgba(255,255,255,0.16)_100%)]"
@@ -490,53 +506,160 @@ onBeforeUnmount(() => {
             <!-- CÓMO COMPRAR -->
             <section
                 id="como-comprar"
-                class="relative overflow-hidden px-4 py-16 text-white sm:px-6 lg:px-8 lg:py-24"
-                :style="{
-                    backgroundImage:
-                        'linear-gradient(135deg, rgba(6,42,94,0.94), rgba(6,42,94,0.82), rgba(48,190,239,0.64)), url(/img/punto-polar-como-comprar-bg.jpg)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                }"
+                class="relative overflow-hidden bg-[#f6fbff] px-4 py-16 sm:px-6 lg:px-8 lg:py-24"
             >
-                <div class="mx-auto w-full max-w-[1500px]">
-                    <div data-reveal class="reveal max-w-4xl">
-                        <span
-                            class="inline-flex rounded-full bg-white/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-white/70"
-                        >
-                            Cómo comprar
-                        </span>
+                <div
+                    class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,rgba(48,190,239,0.16),transparent_30%),radial-gradient(circle_at_92%_15%,rgba(6,42,94,0.10),transparent_28%)]"
+                />
 
-                        <h2
-                            class="mt-4 text-4xl font-black tracking-tight md:text-6xl"
-                        >
-                            Compra en línea y sigue cada etapa.
-                        </h2>
+                <div class="relative mx-auto w-full max-w-[1500px]">
+                    <div
+                        data-reveal
+                        class="reveal mb-12 flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+                    >
+                        <div class="max-w-4xl">
+                            <span
+                                class="inline-flex rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-[#062A5E] shadow-sm"
+                            >
+                                Cómo comprar
+                            </span>
 
-                        <p class="mt-4 max-w-2xl text-base leading-7 text-white/72">
-                            Desde que confirmas tu pedido hasta que está listo
-                            para recoger, recibirás actualizaciones para saber
-                            cómo va tu compra.
-                        </p>
+                            <h2
+                                class="mt-4 text-4xl font-black tracking-tight text-[#062A5E] md:text-6xl"
+                            >
+                                Compra en línea y sigue cada etapa.
+                            </h2>
+
+                            <p
+                                class="mt-4 max-w-2xl text-base leading-7 text-slate-600"
+                            >
+                                Hacer tu pedido es simple: seleccionas,
+                                confirmas tu pago y te mantenemos informado
+                                hasta que esté listo para recoger.
+                            </p>
+                        </div>
                     </div>
 
-                    <div class="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        <div
+                    <div
+                        class="relative grid gap-3 md:block md:h-[565px] lg:h-[710px]"
+                    >
+                        <article
                             v-for="(step, index) in buySteps"
                             :key="step.title"
                             data-reveal
-                            class="reveal rounded-[30px] border border-white/14 bg-white/10 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.14)] backdrop-blur-xl"
-                            :class="`reveal-delay-${Math.min(index, 3)}`"
+                            class="reveal group relative min-h-[230px] overflow-hidden rounded-[34px] border border-white/70 bg-white shadow-[0_18px_54px_rgba(6,42,94,0.08)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_28px_80px_rgba(6,42,94,0.15)]"
+                            :class="[
+                                `reveal-delay-${Math.min(index, 3)}`,
+
+                            index === 0
+                                ? 'md:absolute md:left-0 md:top-0 md:h-[305px] md:w-[37%] lg:h-[430px]'
+                                : '',
+
+                            index === 1
+                                ? 'md:absolute md:left-1/2 md:top-0 md:h-[270px] md:w-[25%] md:-translate-x-1/2 lg:h-[310px]'
+                                : '',
+
+                            index === 2
+                                ? 'md:absolute md:right-0 md:top-0 md:h-[305px] md:w-[37%] lg:h-[430px]'
+                                : '',
+
+                            index === 3
+                                ? 'md:absolute md:left-0 md:top-[325px] md:h-[220px] md:w-[37%] lg:top-[455px] lg:h-[235px]'
+                                : '',
+
+                            index === 4
+                                ? 'md:absolute md:left-1/2 md:top-[295px] md:h-[270px] md:w-[25%] md:-translate-x-1/2 lg:top-[335px] lg:h-[310px]'
+                                : '',
+
+                            index === 5
+                                ? 'md:absolute md:right-0 md:top-[325px] md:h-[220px] md:w-[37%] lg:top-[455px] lg:h-[235px]'
+                                : '',
+                            ]"
                         >
-                            <p class="text-4xl font-black text-[#30BEEF]">
+                            <img
+                                :src="step.image"
+                                :alt="step.title"
+                                class="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+
+                            <div
+                                class="absolute inset-0 transition duration-500"
+                                :class="[
+                                    index === 1
+                                        ? 'bg-[linear-gradient(135deg,rgba(3,7,18,0.86),rgba(3,7,18,0.62))]'
+                                        : '',
+
+                                    index === 4
+                                        ? 'bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,255,255,0.74))]'
+                                        : '',
+
+                                    index === 3 || index === 5
+                                        ? 'bg-[linear-gradient(135deg,rgba(6,42,94,0.84),rgba(11,95,165,0.60))]'
+                                        : '',
+
+                                    index === 0 || index === 2
+                                        ? 'bg-[linear-gradient(135deg,rgba(48,190,239,0.68),rgba(6,42,94,0.56))]'
+                                        : '',
+                                ]"
+                            />
+
+                            <span
+                                class="absolute right-5 top-4 font-black leading-none transition duration-300"
+                                :class="[
+                                    index === 4
+                                        ? 'text-[#062A5E]/8'
+                                        : 'text-white/14',
+                                    index === 1 || index === 4
+                                        ? 'text-5xl lg:text-6xl'
+                                        : 'text-7xl lg:text-8xl',
+                                ]"
+                            >
                                 {{ step.number }}
-                            </p>
-                            <h3 class="mt-5 text-xl font-black">
-                                {{ step.title }}
-                            </h3>
-                            <p class="mt-3 text-sm leading-6 text-white/70">
-                                {{ step.text }}
-                            </p>
-                        </div>
+                            </span>
+
+                            <div
+                                class="relative z-10 flex h-full flex-col justify-between p-6"
+                                :class="index === 1 || index === 4 ? 'lg:p-5' : 'lg:p-7'"
+                            >
+                                <div>
+                                    <p
+                                        class="text-xs font-black uppercase tracking-[0.22em]"
+                                        :class="
+                                            index === 4
+                                                ? 'text-[#30BEEF]'
+                                                : 'text-white/75'
+                                        "
+                                    >
+                                        Paso {{ step.number }}
+                                    </p>
+
+                                    <h3
+                                        class="mt-3 font-black leading-tight tracking-tight"
+                                        :class="[
+                                            index === 4
+                                                ? 'text-[#062A5E]'
+                                                : 'text-white',
+                                            index === 1 || index === 4
+                                                ? 'text-xl lg:text-2xl'
+                                                : 'text-2xl lg:text-3xl',
+                                        ]"
+                                    >
+                                        {{ step.title }}
+                                    </h3>
+                                </div>
+
+                                <p
+                                    class="mt-6 max-w-[18rem] text-sm leading-6"
+                                    :class="
+                                        index === 4
+                                            ? 'text-slate-600'
+                                            : 'text-white/82'
+                                    "
+                                >
+                                    {{ step.text }}
+                                </p>
+                            </div>
+                        </article>
                     </div>
                 </div>
             </section>
@@ -806,15 +929,27 @@ onBeforeUnmount(() => {
             <section
                 id="preguntas-frecuentes"
                 class="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8 lg:py-24"
-                :style="{
-                    backgroundImage:
-                        'linear-gradient(180deg, rgba(246,251,255,0.96), rgba(255,255,255,0.96)), url(/img/png/faq-bg.png)',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                }"
             >
+                <div class="absolute inset-0">
+                    <picture>
+                        <source
+                            media="(max-width: 767px)"
+                            :srcset="faqBgMobile"
+                        />
+                        <img
+                            :src="faqBg"
+                            alt=""
+                            class="h-full w-full object-cover object-center"
+                        />
+                    </picture>
+
+                    <div
+                        class="absolute inset-0 bg-[linear-gradient(180deg,rgba(246,251,255,0.78),rgba(255,255,255,0.70))] md:bg-[linear-gradient(180deg,rgba(246,251,255,0.85),rgba(255,255,255,0.79))]"
+                    />
+                </div>
+
                 <div
-                    class="mx-auto grid w-full max-w-[1300px] gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"
+                    class="relative mx-auto grid w-full max-w-[1300px] gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-start"
                 >
                     <div data-reveal class="reveal">
                         <span
@@ -832,8 +967,10 @@ onBeforeUnmount(() => {
                         <p
                             class="mt-5 max-w-xl text-base leading-8 text-slate-600"
                         >
-                            Dejamos las respuestas ocultas para que la sección
-                            sea más limpia y puedas abrir solo lo que necesitas.
+                            Sabemos que antes de comprar pueden surgir dudas.
+                            Aquí reunimos las preguntas más comunes para
+                            ayudarte a elegir y recoger tu pedido con
+                            tranquilidad.
                         </p>
                     </div>
 
@@ -857,32 +994,35 @@ onBeforeUnmount(() => {
                                 </span>
 
                                 <span
-                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eaf9ff] text-xl font-black text-[#062A5E] transition-transform duration-300"
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#eaf9ff] text-xl font-black text-[#062A5E] transition-transform duration-300 ease-out"
                                     :class="
-                                        activeFaq === index ? 'rotate-45' : ''
+                                        activeFaq === index
+                                            ? 'rotate-45 scale-105'
+                                            : 'rotate-0 scale-100'
                                     "
                                 >
                                     +
                                 </span>
                             </button>
 
-                            <Transition
-                                enter-active-class="transition duration-300 ease-out"
-                                enter-from-class="max-h-0 opacity-0"
-                                enter-to-class="max-h-40 opacity-100"
-                                leave-active-class="transition duration-200 ease-in"
-                                leave-from-class="max-h-40 opacity-100"
-                                leave-to-class="max-h-0 opacity-0"
+                            <div
+                                class="grid transition-[grid-template-rows,opacity] duration-300 ease-out"
+                                :class="
+                                    activeFaq === index
+                                        ? 'grid-rows-[1fr] opacity-100'
+                                        : 'grid-rows-[0fr] opacity-0'
+                                "
                             >
-                                <div
-                                    v-if="activeFaq === index"
-                                    class="overflow-hidden px-5 pb-5 md:px-6"
-                                >
-                                    <p class="text-sm leading-7 text-slate-600">
-                                        {{ faq.answer }}
-                                    </p>
+                                <div class="overflow-hidden">
+                                    <div class="px-5 pb-5 md:px-6">
+                                        <p
+                                            class="text-sm leading-7 text-slate-600"
+                                        >
+                                            {{ faq.answer }}
+                                        </p>
+                                    </div>
                                 </div>
-                            </Transition>
+                            </div>
                         </article>
                     </div>
                 </div>
@@ -894,11 +1034,18 @@ onBeforeUnmount(() => {
                 class="relative overflow-hidden px-4 py-16 sm:px-6 lg:px-8 lg:py-24"
             >
                 <div class="absolute inset-0">
-                    <img
-                        :src="heroImg"
-                        alt=""
-                        class="h-full w-full object-cover opacity-45"
-                    />
+                    <picture>
+                        <source
+                            media="(max-width: 767px)"
+                            :srcset="heroImgMobile"
+                        />
+                        <img
+                            :src="heroImg"
+                            alt=""
+                            class="h-full w-full object-cover opacity-45"
+                        />
+                    </picture>
+
                     <div
                         class="absolute inset-0 bg-[linear-gradient(135deg,rgba(6,42,94,0.92)_0%,rgba(11,95,165,0.78)_52%,rgba(48,190,239,0.66)_100%)]"
                     />
