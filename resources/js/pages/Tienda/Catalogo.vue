@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import heroImg from '@/img/hero-tienda.jpeg'
+import { COMPRAS_EN_LINEA_ACTIVAS } from '@/composables/useConfig'
 
 interface Categoria {
   id: number
@@ -263,16 +264,23 @@ function addToCart(producto: Producto) {
     },
   )
 }
+
 </script>
 
 <template>
   <PublicLayout>
-    <Head title="Catálogo de productos" />
+    <Head>
+      <title>Catálogo de productos · Punto Polar</title>
+      <meta
+        name="description"
+        content="Explora el catálogo de Punto Polar: agua purificada en garrafón y hielo en bolsa. Filtra por categoría, precio y promociones. Disponible en Jiutepec, Morelos."
+      />
+    </Head>
 
     <div class="bg-[linear-gradient(180deg,#ffffff_0%,#f7fbff_100%)]">
       <section class="px-4 pb-14 pt-8 md:px-8 md:pt-10">
         <div class="mx-auto w-full max-w-[1550px]">
-          <div class="mb-8 flex flex-col gap-5 rounded-[34px] border border-neutral-200 bg-white/90 px-5 py-6 shadow-[0_20px_50px_rgba(17,20,44,0.06)] backdrop-blur md:px-7 lg:flex-row lg:items-end lg:justify-between">
+          <div data-reveal class="pp-reveal mb-8 flex flex-col gap-5 rounded-[34px] border border-neutral-200 bg-white/90 px-5 py-6 shadow-[0_20px_50px_rgba(17,20,44,0.06)] backdrop-blur md:px-7 lg:flex-row lg:items-end lg:justify-between">
             <div class="max-w-3xl">
 
               <h1 class="mt-4 text-3xl font-black tracking-tight text-neutral-900 md:text-5xl">
@@ -536,9 +544,10 @@ function addToCart(producto: Producto) {
 
               <div v-if="filteredProducts.length" class="grid gap-6 sm:grid-cols-2 2xl:grid-cols-3">
                 <div
-                  v-for="producto in filteredProducts"
+                  v-for="(producto, index) in filteredProducts"
                   :key="producto.id"
-                  class="group [perspective:1800px]"
+                  class="group [perspective:1800px] pp-card-in"
+                  :style="{ animationDelay: `${(index % 6) * 60}ms` }"
                 >
                   <div
                     class="relative h-[560px] w-full rounded-[32px] transition-transform duration-700 [transform-style:preserve-3d] group-hover:[transform:rotateY(180deg)]"
@@ -627,7 +636,10 @@ function addToCart(producto: Producto) {
                             </div>
                           </div>
 
-                          <div class="mt-5 grid grid-cols-2 gap-3">
+                          <div
+                            class="mt-5 grid gap-3"
+                            :class="COMPRAS_EN_LINEA_ACTIVAS ? 'grid-cols-2' : 'grid-cols-1'"
+                          >
                             <Link
                               :href="`/productos/${producto.slug}`"
                               class="inline-flex h-12 items-center justify-center rounded-full border border-[var(--brand-blue)] px-4 text-sm font-black text-[var(--brand-blue)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--brand-blue)] hover:text-white hover:shadow-sm"
@@ -636,6 +648,7 @@ function addToCart(producto: Producto) {
                             </Link>
 
                             <button
+                              v-if="COMPRAS_EN_LINEA_ACTIVAS"
                               type="button"
                               class="relative inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#30BEEF_0%,#0B5FA5_100%)] px-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[var(--brand-green)] hover:text-[#11142C] hover:shadow-[0_14px_30px_rgba(125,208,60,0.20)] disabled:cursor-not-allowed disabled:bg-neutral-300 disabled:text-white"
                               :disabled="producto.stock < 1"
@@ -739,7 +752,10 @@ function addToCart(producto: Producto) {
                           </div>
                         </div>
 
-                        <div class="mt-auto grid grid-cols-2 gap-3 pt-6">
+                        <div
+                          class="mt-auto grid gap-3 pt-6"
+                          :class="COMPRAS_EN_LINEA_ACTIVAS ? 'grid-cols-2' : 'grid-cols-1'"
+                        >
                           <Link
                             :href="`/productos/${producto.slug}`"
                             class="inline-flex h-12 items-center justify-center rounded-full border border-white/30 bg-white/10 px-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-white hover:text-[#062A5E]"
@@ -748,6 +764,7 @@ function addToCart(producto: Producto) {
                           </Link>
 
                           <button
+                            v-if="COMPRAS_EN_LINEA_ACTIVAS"
                             type="button"
                             class="relative inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffffff_0%,#dff7ff_100%)] px-4 text-sm font-black text-[#062A5E] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[linear-gradient(135deg,#30BEEF_0%,#ffffff_100%)] hover:text-[#062A5E] hover:shadow-[0_14px_30px_rgba(255,255,255,0.20)] disabled:cursor-not-allowed disabled:bg-white/20 disabled:text-white/50"
                             :disabled="producto.stock < 1"

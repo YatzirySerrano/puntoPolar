@@ -4,8 +4,9 @@ import Swal from 'sweetalert2';
 import { computed, onMounted } from 'vue';
 import StoreFooter from '@/components/public/StoreFooter.vue';
 import StoreNavbar from '@/components/public/StoreNavbar.vue';
-//import WhaticketWidget from '@/components/integrations/WhaticketWidget.vue';
+import { useReveal } from '@/composables/useReveal';
 
+useReveal();
 interface AuthUser {
     id: number;
     name: string;
@@ -77,8 +78,6 @@ onMounted(() => {
     >
         <Head title="Punto Polar" />
 
-        <WhaticketWidget />
-
         <StoreNavbar
             :carrito-cantidad="carritoCantidad"
             :auth-user="authUser"
@@ -92,11 +91,11 @@ onMounted(() => {
     </div>
 
     <a
-    href="https://wa.me/527771148125?text=Hola%2C%20me%20gustar%C3%ADa%20hacer%20una%20consulta%20sobre%20Punto%20Polar."
+    href="https://wa.me/527771148125?text=Hola%2C%20quiero%20informaci%C3%B3n%20sobre%20los%20productos%20y%20servicios%20de%20Punto%20Polar."
     target="_blank"
     rel="noopener noreferrer"
-    aria-label="Enviar mensaje por WhatsApp"
-    class="fixed bottom-5 right-5 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-[#25D366] text-white shadow-[0_18px_45px_rgba(37,211,102,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-105"
+    aria-label="Enviar mensaje por WhatsApp a Punto Polar"
+    class="pp-wa-pulse fixed bottom-5 right-5 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-[#25D366] text-white transition-all duration-300 hover:-translate-y-1 hover:scale-105"
 >
     <svg
         viewBox="0 0 32 32"

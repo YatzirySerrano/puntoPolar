@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
 import { ref } from 'vue';
+import { COMPRAS_EN_LINEA_ACTIVAS } from '@/composables/useConfig';
 
 interface Producto {
     id: number;
@@ -97,7 +98,10 @@ const agregarAlCarrito = () => {
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2">
+                    <div
+                        class="grid gap-2"
+                        :class="COMPRAS_EN_LINEA_ACTIVAS ? 'grid-cols-2' : 'grid-cols-1'"
+                    >
                         <Link
                             :href="`/productos/${producto.slug}`"
                             class="inline-flex items-center justify-center rounded-full border border-[var(--brand-blue)] px-4 py-2 text-sm font-bold text-[var(--brand-blue)] transition hover:bg-[var(--brand-blue)] hover:text-white"
@@ -106,6 +110,7 @@ const agregarAlCarrito = () => {
                         </Link>
 
                         <button
+                            v-if="COMPRAS_EN_LINEA_ACTIVAS"
                             type="button"
                             class="rounded-full bg-[var(--brand-green)] px-4 py-2 text-sm font-bold text-white transition hover:scale-[1.02] hover:brightness-95 disabled:cursor-not-allowed disabled:bg-[var(--brand-gray)]"
                             :class="animando ? 'animate-pulse' : ''"
@@ -144,6 +149,7 @@ const agregarAlCarrito = () => {
                             {{ formatearMoneda(producto.precio) }}
                         </p>
                         <button
+                            v-if="COMPRAS_EN_LINEA_ACTIVAS"
                             type="button"
                             class="w-full rounded-full bg-white px-4 py-2 text-sm font-black text-[var(--brand-blue)] transition hover:scale-[1.02]"
                             :disabled="producto.stock < 1"

@@ -124,12 +124,12 @@ const socialLinks = [
             class="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(48,190,239,0.22),transparent_34%),radial-gradient(circle_at_86%_18%,rgba(6,42,94,0.12),transparent_30%),radial-gradient(circle_at_50%_100%,rgba(48,190,239,0.12),transparent_36%)]"
         />
 
-        <section id="contacto-home" class="relative px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+        <section id="contacto-home" class="relative px-4 py-10 sm:px-6 lg:px-8 lg:py-12" aria-label="Contacto y ubicación de Punto Polar">
             <div class="mx-auto w-full max-w-[1320px]">
                 <div
                     class="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(380px,0.95fr)] lg:gap-10"
                 >
-                    <div class="space-y-6">
+                    <div data-reveal class="pp-reveal space-y-6">
                         <div>
                             <Link href="/" class="inline-flex items-center">
                                 <img
@@ -324,7 +324,7 @@ const socialLinks = [
                         </div>
                     </div>
 
-                    <div class="space-y-4">
+                    <div data-reveal class="pp-reveal pp-reveal-delay-2 space-y-4">
                         <div>
                             <p
                                 class="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500"
@@ -377,7 +377,8 @@ const socialLinks = [
                 </div>
 
                 <div
-                    class="mt-9 flex flex-col gap-2 border-t border-slate-900/10 pt-5 text-sm font-semibold text-slate-600 md:flex-row md:items-center md:justify-between"
+                    data-reveal
+                    class="pp-reveal pp-reveal-delay-1 mt-9 flex flex-col gap-2 border-t border-slate-900/10 pt-5 text-sm font-semibold text-slate-600 md:flex-row md:items-center md:justify-between"
                 >
                     <p>
                         © {{ year }} Punto Polar. Todos los derechos reservados.

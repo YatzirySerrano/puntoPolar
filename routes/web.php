@@ -1,5 +1,6 @@
 <?php
 
+use Inertia\Inertia;
 use App\Http\Controllers\Admin\BannerController as AdminBannerController;
 use App\Http\Controllers\Admin\CategoriaController as AdminCategoriaController;
 use App\Http\Controllers\Admin\ConfiguracionController as AdminConfiguracionController;
@@ -24,7 +25,15 @@ Route::get('/', [TiendaController::class, 'index'])->name('home');
 Route::get('/productos', [TiendaController::class, 'catalogo'])->name('tienda.catalogo');
 Route::get('/productos/{producto:slug}', [TiendaController::class, 'show'])->name('tienda.show');
 
-Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index');
+// === COMPRAS EN LÍNEA TEMPORALMENTE DESACTIVADAS ===
+// Para reactivar: eliminar el bloque de rutas temporales y descomentar las originales.
+Route::get('/compras-proximamente', fn () => Inertia::render('Tienda/ComprasProximamente'))->name('compras.proximamente');
+Route::get('/carrito', fn () => Inertia::render('Tienda/ComprasProximamente'))->name('carrito.index');
+Route::get('/checkout', fn () => Inertia::render('Tienda/ComprasProximamente'))->name('checkout.index');
+Route::get('/checkout/gracias/{pedido}', fn () => Inertia::render('Tienda/ComprasProximamente'))->name('checkout.gracias');
+// === FIN BLOQUE TEMPORAL ===
+
+// Route::get('/carrito', [CarritoController::class, 'index'])->name('carrito.index'); // ORIGINAL
 Route::post('/carrito/agregar', [CarritoController::class, 'agregar'])->name('carrito.agregar');
 
 /*
@@ -42,15 +51,12 @@ Route::delete('/carrito', [CarritoController::class, 'vaciar'])->name('carrito.v
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-    Route::get('/checkout', [CheckoutController::class, 'index'])
-    ->name('checkout.index');
-
+    // GET de checkout comentado — rutas temporales definidas arriba
+    // Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout', [CheckoutController::class, 'store'])
         ->name('checkout.store');
 
-    Route::get('/checkout/gracias/{pedido}', [CheckoutController::class, 'gracias'])
-        ->name('checkout.gracias');
-
+    // Route::get('/checkout/gracias/{pedido}', [CheckoutController::class, 'gracias'])->name('checkout.gracias');
     Route::post('/checkout/gracias/{pedido}/pagar', [CheckoutController::class, 'pagar'])
     ->name('checkout.pagar');
 

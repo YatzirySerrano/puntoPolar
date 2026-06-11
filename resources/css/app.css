@@ -177,3 +177,118 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* ===================================================
+   PUNTO POLAR — Animaciones y utilidades globales
+=================================================== */
+
+html {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Scroll reveal — usar en cualquier componente con data-reveal */
+.pp-reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+        opacity 700ms ease,
+        transform 700ms ease;
+}
+
+.pp-reveal.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.pp-reveal-delay-1 { transition-delay: 80ms; }
+.pp-reveal-delay-2 { transition-delay: 160ms; }
+.pp-reveal-delay-3 { transition-delay: 240ms; }
+.pp-reveal-delay-4 { transition-delay: 320ms; }
+.pp-reveal-delay-5 { transition-delay: 400ms; }
+
+/* Escala entrada — variante horizontal */
+.pp-reveal-scale {
+    opacity: 0;
+    transform: scale(0.96);
+    transition:
+        opacity 600ms ease,
+        transform 600ms ease;
+}
+
+.pp-reveal-scale.is-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+/* WhatsApp floating button — pulso de anillo */
+@keyframes pp-wa-ring {
+    0%   { box-shadow: 0 18px 45px rgba(37,211,102,0.35), 0 0 0 0 rgba(37,211,102,0.28); }
+    70%  { box-shadow: 0 18px 45px rgba(37,211,102,0.35), 0 0 0 12px rgba(37,211,102,0); }
+    100% { box-shadow: 0 18px 45px rgba(37,211,102,0.35), 0 0 0 0 rgba(37,211,102,0); }
+}
+
+.pp-wa-pulse {
+    animation: pp-wa-ring 2.6s ease-out infinite;
+}
+
+/* Hover card — glow suave */
+.pp-card-hover {
+    transition:
+        transform 300ms ease,
+        box-shadow 300ms ease;
+}
+
+.pp-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 28px 70px rgba(6,42,94,0.13);
+}
+
+/* Product card staggered entrance */
+@keyframes pp-card-in {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.pp-card-in {
+    animation: pp-card-in 0.5s ease both;
+}
+
+/* Entrance animation for above-fold elements */
+@keyframes pp-entrance {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.pp-entrance { animation: pp-entrance 0.6s ease both; }
+.pp-entrance-delay-1 { animation-delay: 100ms; }
+.pp-entrance-delay-2 { animation-delay: 200ms; }
+.pp-entrance-delay-3 { animation-delay: 300ms; }
+.pp-entrance-delay-4 { animation-delay: 400ms; }
+.pp-entrance-delay-5 { animation-delay: 500ms; }
+.pp-entrance-delay-6 { animation-delay: 600ms; }

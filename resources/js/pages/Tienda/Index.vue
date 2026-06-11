@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { COMPRAS_EN_LINEA_ACTIVAS } from '@/composables/useConfig';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import logo from '@/img/punto_polar_logo_navbar.svg';
 import heroImg from '@/img/png/fondo-hero.png';
@@ -204,44 +205,6 @@ const faqs = [
     },
 ];
 
-let observer: IntersectionObserver | null = null;
-
-function initRevealOnScroll() {
-    if (typeof window === 'undefined') return;
-
-    const prefersReducedMotion = window.matchMedia(
-        '(prefers-reduced-motion: reduce)',
-    ).matches;
-
-    const elements = document.querySelectorAll<HTMLElement>('[data-reveal]');
-
-    if (prefersReducedMotion) {
-        elements.forEach((element) => {
-            element.classList.add('is-visible');
-        });
-
-        return;
-    }
-
-    observer = new IntersectionObserver(
-        (entries) => {
-            entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('is-visible');
-                } else {
-                    entry.target.classList.remove('is-visible');
-                }
-            });
-        },
-        {
-            threshold: 0.16,
-            rootMargin: '0px 0px -8% 0px',
-        },
-    );
-
-    elements.forEach((element) => observer?.observe(element));
-}
-
 function formatPrice(value: number | string | null | undefined) {
     return new Intl.NumberFormat('es-MX', {
         style: 'currency',
@@ -331,18 +294,17 @@ function sendContactEmail() {
     window.location.href = `mailto:contactopuntopolar@gmail.com?subject=${subject}&body=${body}`;
 }
 
-onMounted(() => {
-    initRevealOnScroll();
-});
-
-onBeforeUnmount(() => {
-    observer?.disconnect();
-});
 </script>
 
 <template>
     <PublicLayout>
-        <Head title="Punto Polar · Hielo y Agua 24/7" />
+        <Head>
+            <title>Punto Polar · Agua Purificada y Hielo 24/7</title>
+            <meta
+                name="description"
+                content="Punto Polar en Jiutepec, Morelos. Agua purificada en garrafón (20 L, 10 L, 4 L) y hielo en bolsa (5 kg, 3 kg). Despachador automático disponible 24/7. Pide por WhatsApp."
+            />
+        </Head>
 
         <div class="overflow-hidden bg-white text-slate-950">
             <!-- HERO -->
@@ -796,6 +758,7 @@ onBeforeUnmount(() => {
                                     </div>
 
                                     <div
+                                        v-if="COMPRAS_EN_LINEA_ACTIVAS"
                                         class="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-[auto_1fr]"
                                     >
                                         <div
@@ -1187,6 +1150,7 @@ onBeforeUnmount(() => {
                         </p>
 
                         <Link
+                            v-if="COMPRAS_EN_LINEA_ACTIVAS"
                             href="/carrito"
                             class="mt-3 inline-flex h-10 items-center justify-center rounded-full bg-[#062A5E] px-5 text-xs font-black text-white transition hover:bg-[#30BEEF]"
                         >
