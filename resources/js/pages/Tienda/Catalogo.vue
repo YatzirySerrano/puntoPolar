@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
+import { pageTitles } from '@/config/pageTitles'
 import PublicLayout from '@/layouts/PublicLayout.vue'
-import heroImg from '@/img/hero-tienda.jpeg'
+import heroImg from '@/img/png/fondo-hero.png'
 import { COMPRAS_EN_LINEA_ACTIVAS } from '@/composables/useConfig'
 
 interface Categoria {
@@ -269,8 +270,7 @@ function addToCart(producto: Producto) {
 
 <template>
   <PublicLayout>
-    <Head>
-      <title>Catálogo de productos · Punto Polar</title>
+    <Head :title="pageTitles.productos">
       <meta
         name="description"
         content="Explora el catálogo de Punto Polar: agua purificada en garrafón y hielo en bolsa. Filtra por categoría, precio y promociones. Disponible en Jiutepec, Morelos."

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
+import { pageTitles } from '@/config/pageTitles';
 
 interface ItemCheckout {
     producto_id: number;
@@ -267,6 +268,7 @@ const confirmarPedido = () => {
 
 <template>
     <PublicLayout>
+        <Head :title="pageTitles.checkout" />
         <section class="bg-[#f7f8fa]">
             <div class="mx-auto max-w-7xl px-4 py-10 md:px-6 md:py-12">
                 <div

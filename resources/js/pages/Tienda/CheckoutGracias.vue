@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
+import { pageTitles } from '@/config/pageTitles';
 
 declare global {
     interface Window {
@@ -282,6 +283,7 @@ onMounted(() => {
 
 <template>
     <PublicLayout>
+        <Head :title="pageTitles.checkoutGracias" />
         <section class="bg-[#f7f8fa]">
             <div class="mx-auto max-w-6xl px-4 py-12 md:px-6 md:py-16">
                 <div

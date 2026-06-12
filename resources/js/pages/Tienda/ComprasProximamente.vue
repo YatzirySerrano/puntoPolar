@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import PublicLayout from '@/layouts/PublicLayout.vue'
+import { pageTitles } from '@/config/pageTitles'
 import logo from '@/img/punto_polar_logo_transparente.svg'
 
 const waUrl =
@@ -10,7 +11,7 @@ const phonePretty = '777 114 8125'
 
 <template>
     <PublicLayout>
-        <Head title="Compras en línea próximamente · Punto Polar" />
+        <Head :title="pageTitles.comprasProximamente" />
 
         <section
             class="relative min-h-[calc(100vh-80px)] overflow-hidden bg-[linear-gradient(135deg,#f6fbff_0%,#eaf9ff_50%,#f6fbff_100%)] px-4 py-24 sm:px-6 lg:px-8"

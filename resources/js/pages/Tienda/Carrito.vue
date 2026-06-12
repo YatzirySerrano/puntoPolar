@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Link, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import PublicLayout from '@/layouts/PublicLayout.vue';
-import heroImg from '@/img/hero-tienda.jpeg';
+import heroImg from '@/img/png/fondo-hero.png';
+import { pageTitles } from '@/config/pageTitles';
 
 interface OfertaInfo {
     id: number;
@@ -164,6 +165,7 @@ const quitarCupon = () => {
 
 <template>
     <PublicLayout>
+        <Head :title="pageTitles.carrito" />
         <section class="relative overflow-hidden">
             <img
                 :src="heroImg"

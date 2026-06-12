@@ -16,18 +16,21 @@
         <meta property="og:site_name" content="Punto Polar">
         <meta property="og:title" content="Punto Polar · Agua Purificada y Hielo 24/7">
         <meta property="og:description" content="Despachador automático de agua purificada y hielo en Jiutepec, Morelos. Disponible 24/7. Agua en garrafón y hielo en bolsa. Contáctanos por WhatsApp.">
-        <meta property="og:image" content="{{ asset('header.png') }}">
+        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:image" content="{{ asset('og-punto-polar.PNG') }}">
+        <meta property="og:image:secure_url" content="{{ asset('og-punto-polar.PNG') }}">
+        <meta property="og:image:type" content="image/png">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
-        <meta property="og:image:alt" content="Punto Polar - Agua purificada y hielo">
-        <meta property="og:url" content="{{ config('app.url') }}">
+        <meta property="og:image:alt" content="Punto Polar - Agua purificada y hielo 24/7">
         <meta property="og:locale" content="es_MX">
 
         {{-- Twitter Card --}}
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="Punto Polar · Agua Purificada y Hielo 24/7">
-        <meta name="twitter:description" content="Despachador automático de agua purificada y hielo en Jiutepec, Morelos. Disponible 24/7.">
-        <meta name="twitter:image" content="{{ asset('header.png') }}">
+        <meta name="twitter:description" content="Despachador automático de agua purificada y hielo en Jiutepec, Morelos. Disponible 24/7. Agua en garrafón y hielo en bolsa.">
+        <meta name="twitter:image" content="{{ asset('og-punto-polar.PNG') }}">
+        <meta name="twitter:image:alt" content="Punto Polar - Agua purificada y hielo 24/7">
 
         {{-- Schema.org LocalBusiness --}}
         @php
@@ -38,6 +41,9 @@
             'description' => 'Despachador automático de agua purificada y hielo en bolsa. Disponible 24/7 en Jiutepec, Morelos.',
             'telephone'   => '+527771148125',
             'email'       => 'contactopuntopolar@gmail.com',
+            'image' => asset('og-punto-polar.PNG'),
+            'url'   => config('app.url'),
+            'priceRange' => '$',
             'address' => [
                 '@type'           => 'PostalAddress',
                 'streetAddress'   => 'Privada Chilpancingo #20',
@@ -52,9 +58,6 @@
                 'opens'      => '00:00',
                 'closes'     => '23:59',
             ],
-            'priceRange' => '$',
-            'image' => asset('header.png'),
-            'url'   => config('app.url'),
             'sameAs' => [
                 'https://www.facebook.com/profile.php?id=61578482788839',
                 'https://www.instagram.com/puntopolar.hieloagua/',
@@ -90,9 +93,12 @@
             }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        {{-- Favicons --}}
+        <link rel="icon" href="{{ asset('favicon.ico') }}" sizes="any">
+        <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+        <link rel="icon" type="image/png" href="{{ asset('favicon.PNG') }}">
+        <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.PNG') }}">
+        <link rel="canonical" href="{{ url()->current() }}">
 
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />

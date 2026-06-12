@@ -4,11 +4,10 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import AuthLayout from '@/layouts/AuthLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
 import { initializeFlashToast } from '@/lib/flashToast';
-
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+import { formatPageTitle } from '@/config/pageTitles';
 
 createInertiaApp({
-    title: (title) => (title ? `${title} - ${appName}` : appName),
+    title: (title) => formatPageTitle(title),
     layout: (name) => {
         switch (true) {
             case name === 'Welcome':

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, usePage } from '@inertiajs/vue3';
+import { usePage } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 import { computed, onMounted } from 'vue';
 import StoreFooter from '@/components/public/StoreFooter.vue';
@@ -76,8 +76,6 @@ onMounted(() => {
     <div
         class="min-h-screen overflow-x-hidden bg-white text-slate-950 selection:bg-[#30BEEF]/25 selection:text-[#062A5E]"
     >
-        <Head title="Punto Polar" />
-
         <StoreNavbar
             :carrito-cantidad="carritoCantidad"
             :auth-user="authUser"

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { pageTitles } from '@/config/pageTitles';
 import { COMPRAS_EN_LINEA_ACTIVAS } from '@/composables/useConfig';
 import PublicLayout from '@/layouts/PublicLayout.vue';
 import logo from '@/img/punto_polar_logo_navbar.svg';
@@ -298,8 +299,7 @@ function sendContactEmail() {
 
 <template>
     <PublicLayout>
-        <Head>
-            <title>Punto Polar · Agua Purificada y Hielo 24/7</title>
+        <Head :title="pageTitles.home">
             <meta
                 name="description"
                 content="Punto Polar en Jiutepec, Morelos. Agua purificada en garrafón (20 L, 10 L, 4 L) y hielo en bolsa (5 kg, 3 kg). Despachador automático disponible 24/7. Pide por WhatsApp."

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { type HTMLAttributes } from 'vue'
 
-import logoFull from '@/img/logo.png'
+import logoFull from '@/img/punto_polar_logo_navbar.svg'
 
 defineOptions({
   inheritAttrs: false,

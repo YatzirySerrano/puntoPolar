@@ -6,7 +6,8 @@
       "Bash(npm run *)",
       "Bash(php artisan *)",
       "Bash(Remove-Item -Recurse -Force node_modules\\\\.vite -ErrorAction SilentlyContinue)",
-      "Bash(Write-Host \"Vite cache cleared\")"
+      "Bash(Write-Host \"Vite cache cleared\")",
+      "PowerShell(Get-ChildItem C:\\\\wamp64\\\\www\\\\puntoPolar\\\\public\\\\ | Where-Object { $_.Name -match \"favicon|apple|logo|og-\" } | Select-Object Name)"
     ]
   }
 }
